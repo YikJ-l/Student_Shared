@@ -1,0 +1,1414 @@
+# 高校课程互助与笔记分享平台系统说明书
+
+## 文档信息
+- **项目名称**：高校课程互助与笔记分享平台
+- **版本号**：v1.0.0
+- **编写日期**：2024年
+- **编写人员**：开发团队
+- **审核人员**：技术负责人
+
+---
+
+## 目录
+
+1. [项目概述](#1-项目概述)
+2. [系统需求分析](#2-系统需求分析)
+3. [系统设计](#3-系统设计)
+4. [数据库设计](#4-数据库设计)
+5. [接口设计](#5-接口设计)
+6. [前端界面设计](#6-前端界面设计)
+7. [系统实现](#7-系统实现)
+8. [测试方案](#8-测试方案)
+9. [部署指南](#9-部署指南)
+10. [运维管理](#10-运维管理)
+11. [附录](#11-附录)
+
+---
+
+## 1. 项目概述
+
+### 1.1 项目背景
+
+随着高等教育的快速发展，学生对于学习资源共享和知识交流的需求日益增长。传统的学习方式往往局限于课堂教学和个人学习，缺乏有效的资源共享机制。为了解决这一问题，我们开发了高校课程互助与笔记分享平台，旨在为学生提供一个便捷、高效的学习资源共享和交流平台。
+
+### 1.2 项目目标
+
+- **促进知识共享**：建立开放的学习资源共享环境
+- **提升学习效率**：通过资源整合提高学习质量
+- **加强学术交流**：促进师生之间的互动与合作
+- **优化资源配置**：合理分配和利用教学资源
+
+### 1.3 项目特点
+
+- **现代化架构**：采用前后端分离的微服务架构
+- **用户友好**：简洁直观的用户界面设计
+- **功能完善**：涵盖课程管理、笔记分享、互动交流等核心功能
+- **安全可靠**：完善的用户认证和权限管理机制
+- **扩展性强**：模块化设计，便于功能扩展和维护
+
+### 1.4 技术选型
+
+**后端技术栈：**
+- 开发语言：Go 1.20+
+- Web框架：Gin
+- 数据库：MySQL 5.7+
+- ORM框架：GORM
+- 认证方式：JWT
+- 文件存储：本地文件系统
+
+**前端技术栈：**
+- 前端框架：Vue.js 3.2+
+- UI组件库：Element Plus 2.4+
+- 路由管理：Vue Router 4.2+
+- HTTP客户端：Axios 1.6+
+- 构建工具：Vue CLI 5.0+
+- PWA支持：Service Worker
+
+---
+
+## 2. 系统需求分析
+
+### 2.1 功能需求
+
+#### 2.1.1 用户管理
+- 用户注册与登录
+- 个人信息管理
+- 头像上传与更新
+- 密码修改与找回
+- 用户权限管理
+
+#### 2.1.2 课程管理
+- 课程创建与编辑
+- 课程信息展示
+- 课程搜索与筛选
+- 课程加入与退出
+- 课程统计分析
+
+#### 2.1.3 笔记分享
+- 笔记上传与下载
+- 笔记在线预览
+- 笔记分类管理
+- 笔记搜索功能
+- 笔记版本控制
+
+#### 2.1.4 互动功能
+- 笔记点赞与收藏
+- 评论与回复
+- 用户关注
+- 消息通知
+- 学习讨论区
+
+#### 2.1.5 系统管理
+- 用户权限管理
+- 内容审核机制
+- 数据统计分析
+- 系统配置管理
+- 日志监控
+
+### 2.2 非功能需求
+
+#### 2.2.1 性能需求
+- 系统响应时间 < 2秒
+- 并发用户数 > 1000
+- 数据库查询优化
+- 文件上传下载速度优化
+
+#### 2.2.2 安全需求
+- 用户身份认证
+- 数据传输加密
+- SQL注入防护
+- XSS攻击防护
+- 文件上传安全检查
+
+#### 2.2.3 可用性需求
+- 系统可用性 > 99%
+- 7×24小时服务
+- 故障恢复时间 < 30分钟
+- 数据备份与恢复
+
+#### 2.2.4 兼容性需求
+- 支持主流浏览器
+- 响应式设计
+- 移动端适配
+- 跨平台兼容
+
+---
+
+## 3. 系统设计
+
+### 3.1 系统架构设计
+
+#### 3.1.1 整体架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        用户层                               │
+│  Web浏览器  │  移动端浏览器  │  桌面应用  │  移动应用      │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                        表示层                               │
+│           Vue.js前端应用 + Element Plus UI组件             │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼ HTTP/HTTPS
+┌─────────────────────────────────────────────────────────────┐
+│                        网关层                               │
+│              Nginx反向代理 + 负载均衡                      │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                        应用层                               │
+│                    Go + Gin Web框架                        │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────┐ │
+│  │  用户服务   │ │  课程服务   │ │  笔记服务   │ │ 文件服务│ │
+│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                        数据层                               │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────┐ │
+│  │  MySQL数据库│ │  Redis缓存  │ │  文件存储   │ │ 日志系统│ │
+│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### 3.1.2 模块设计
+
+**用户模块（User Module）**
+- 用户注册与登录
+- 个人信息管理
+- 权限控制
+- JWT认证
+
+**课程模块（Course Module）**
+- 课程CRUD操作
+- 课程搜索与筛选
+- 课程统计
+- 课程关联管理
+
+**笔记模块（Note Module）**
+- 笔记上传与管理
+- 笔记分类与标签
+- 笔记搜索
+- 版本控制
+
+**互动模块（Interaction Module）**
+- 点赞与收藏
+- 评论系统
+- 消息通知
+- 用户关注
+
+**文件模块（File Module）**
+- 文件上传下载
+- 文件类型检查
+- 文件存储管理
+- 缩略图生成
+
+### 3.2 数据流设计
+
+#### 3.2.1 用户认证流程
+
+```
+用户 → 登录请求 → 后端验证 → 生成JWT → 返回Token → 前端存储
+     ↓
+后续请求 → 携带Token → 中间件验证 → 业务处理 → 返回结果
+```
+
+#### 3.2.2 文件上传流程
+
+```
+用户选择文件 → 前端预处理 → 上传请求 → 后端验证 → 文件存储 → 数据库记录 → 返回结果
+```
+
+#### 3.2.3 笔记分享流程
+
+```
+创建笔记 → 填写信息 → 上传文件 → 后端处理 → 数据存储 → 审核机制 → 发布展示
+```
+
+---
+
+## 4. 数据库设计
+
+### 4.1 数据库概述
+
+本系统采用MySQL作为主数据库，使用GORM作为ORM框架进行数据库操作。数据库设计遵循第三范式，确保数据的一致性和完整性。
+
+### 4.2 数据库配置
+
+```go
+// 数据库连接配置
+dsn := "root:5215241@tcp(localhost:3306)/shared_student?charset=utf8mb4&parseTime=True&loc=Local"
+db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+    Logger: logger.Default.LogMode(logger.Info),
+})
+```
+
+### 4.3 数据表设计
+
+#### 4.3.1 基础模型
+
+```go
+type BaseModel struct {
+    ID        uint           `gorm:"primarykey" json:"id"`
+    CreatedAt time.Time      `json:"created_at"`
+    UpdatedAt time.Time      `json:"updated_at"`
+    DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+}
+```
+
+#### 4.3.2 用户表（users）
+
+```go
+type User struct {
+    BaseModel
+    Username    string `gorm:"uniqueIndex;size:50;not null" json:"username"`
+    Email       string `gorm:"uniqueIndex;size:100;not null" json:"email"`
+    Password    string `gorm:"size:255;not null" json:"-"`
+    Nickname    string `gorm:"size:50" json:"nickname"`
+    Avatar      string `gorm:"size:255" json:"avatar"`
+    Role        string `gorm:"size:20;default:'student'" json:"role"`
+    Status      string `gorm:"size:20;default:'active'" json:"status"`
+    LastLoginAt *time.Time `json:"last_login_at"`
+    
+    // 关联关系
+    Courses     []Course     `gorm:"many2many:user_courses;" json:"courses,omitempty"`
+    Notes       []Note       `gorm:"foreignKey:UserID" json:"notes,omitempty"`
+    Comments    []Comment    `gorm:"foreignKey:UserID" json:"comments,omitempty"`
+    NoteLikes   []NoteLike   `gorm:"foreignKey:UserID" json:"note_likes,omitempty"`
+    Favorites   []Favorite   `gorm:"foreignKey:UserID" json:"favorites,omitempty"`
+}
+```
+
+#### 4.3.3 课程表（courses）
+
+```go
+type Course struct {
+    BaseModel
+    Name        string `gorm:"size:100;not null" json:"name"`
+    Code        string `gorm:"uniqueIndex;size:20;not null" json:"code"`
+    Description string `gorm:"type:text" json:"description"`
+    TeacherID   uint   `gorm:"not null" json:"teacher_id"`
+    Credit      int    `gorm:"default:0" json:"credit"`
+    Semester    string `gorm:"size:20" json:"semester"`
+    Status      string `gorm:"size:20;default:'active'" json:"status"`
+    
+    // 关联关系
+    Teacher     User         `gorm:"foreignKey:TeacherID" json:"teacher,omitempty"`
+    Students    []User       `gorm:"many2many:user_courses;" json:"students,omitempty"`
+    Notes       []Note       `gorm:"foreignKey:CourseID" json:"notes,omitempty"`
+}
+```
+
+#### 4.3.4 用户课程关联表（user_courses）
+
+```go
+type UserCourse struct {
+    UserID     uint      `gorm:"primaryKey" json:"user_id"`
+    CourseID   uint      `gorm:"primaryKey" json:"course_id"`
+    JoinedAt   time.Time `gorm:"autoCreateTime" json:"joined_at"`
+    Role       string    `gorm:"size:20;default:'student'" json:"role"`
+    Status     string    `gorm:"size:20;default:'active'" json:"status"`
+    
+    // 关联关系
+    User       User      `gorm:"foreignKey:UserID" json:"user,omitempty"`
+    Course     Course    `gorm:"foreignKey:CourseID" json:"course,omitempty"`
+}
+```
+
+#### 4.3.5 笔记表（notes）
+
+```go
+type Note struct {
+    BaseModel
+    Title       string `gorm:"size:200;not null" json:"title"`
+    Description string `gorm:"type:text" json:"description"`
+    Content     string `gorm:"type:longtext" json:"content"`
+    FilePath    string `gorm:"size:500" json:"file_path"`
+    FileSize    int64  `gorm:"default:0" json:"file_size"`
+    FileType    string `gorm:"size:50" json:"file_type"`
+    UserID      uint   `gorm:"not null" json:"user_id"`
+    CourseID    uint   `gorm:"not null" json:"course_id"`
+    Tags        string `gorm:"size:500" json:"tags"`
+    ViewCount   int    `gorm:"default:0" json:"view_count"`
+    LikeCount   int    `gorm:"default:0" json:"like_count"`
+    Status      string `gorm:"size:20;default:'pending'" json:"status"`
+    
+    // 关联关系
+    User        User         `gorm:"foreignKey:UserID" json:"user,omitempty"`
+    Course      Course       `gorm:"foreignKey:CourseID" json:"course,omitempty"`
+    Comments    []Comment    `gorm:"foreignKey:NoteID" json:"comments,omitempty"`
+    NoteLikes   []NoteLike   `gorm:"foreignKey:NoteID" json:"note_likes,omitempty"`
+    Favorites   []Favorite   `gorm:"foreignKey:NoteID" json:"favorites,omitempty"`
+}
+```
+
+#### 4.3.6 评论表（comments）
+
+```go
+type Comment struct {
+    BaseModel
+    Content    string `gorm:"type:text;not null" json:"content"`
+    UserID     uint   `gorm:"not null" json:"user_id"`
+    NoteID     uint   `gorm:"not null" json:"note_id"`
+    ParentID   *uint  `json:"parent_id"`
+    LikeCount  int    `gorm:"default:0" json:"like_count"`
+    Status     string `gorm:"size:20;default:'active'" json:"status"`
+    
+    // 关联关系
+    User       User           `gorm:"foreignKey:UserID" json:"user,omitempty"`
+    Note       Note           `gorm:"foreignKey:NoteID" json:"note,omitempty"`
+    Parent     *Comment       `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
+    Replies    []Comment      `gorm:"foreignKey:ParentID" json:"replies,omitempty"`
+    Likes      []CommentLike  `gorm:"foreignKey:CommentID" json:"likes,omitempty"`
+}
+```
+
+#### 4.3.7 笔记点赞表（note_likes）
+
+```go
+type NoteLike struct {
+    UserID    uint      `gorm:"primaryKey" json:"user_id"`
+    NoteID    uint      `gorm:"primaryKey" json:"note_id"`
+    CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+    
+    // 关联关系
+    User      User      `gorm:"foreignKey:UserID" json:"user,omitempty"`
+    Note      Note      `gorm:"foreignKey:NoteID" json:"note,omitempty"`
+}
+```
+
+#### 4.3.8 收藏表（favorites）
+
+```go
+type Favorite struct {
+    UserID    uint      `gorm:"primaryKey" json:"user_id"`
+    NoteID    uint      `gorm:"primaryKey" json:"note_id"`
+    CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+    
+    // 关联关系
+    User      User      `gorm:"foreignKey:UserID" json:"user,omitempty"`
+    Note      Note      `gorm:"foreignKey:NoteID" json:"note,omitempty"`
+}
+```
+
+#### 4.3.9 评论点赞表（comment_likes）
+
+```go
+type CommentLike struct {
+    UserID    uint      `gorm:"primaryKey" json:"user_id"`
+    CommentID uint      `gorm:"primaryKey" json:"comment_id"`
+    CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+    
+    // 关联关系
+    User      User      `gorm:"foreignKey:UserID" json:"user,omitempty"`
+    Comment   Comment   `gorm:"foreignKey:CommentID" json:"comment,omitempty"`
+}
+```
+
+### 4.4 数据库索引设计
+
+为了提高查询性能，在关键字段上建立了以下索引：
+
+```sql
+-- 用户表索引
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_users_status ON users(status);
+
+-- 课程表索引
+CREATE INDEX idx_courses_code ON courses(code);
+CREATE INDEX idx_courses_teacher_id ON courses(teacher_id);
+CREATE INDEX idx_courses_status ON courses(status);
+
+-- 笔记表索引
+CREATE INDEX idx_notes_user_id ON notes(user_id);
+CREATE INDEX idx_notes_course_id ON notes(course_id);
+CREATE INDEX idx_notes_status ON notes(status);
+CREATE INDEX idx_notes_created_at ON notes(created_at);
+CREATE FULLTEXT INDEX idx_notes_title_content ON notes(title, content);
+
+-- 评论表索引
+CREATE INDEX idx_comments_note_id ON comments(note_id);
+CREATE INDEX idx_comments_user_id ON comments(user_id);
+CREATE INDEX idx_comments_parent_id ON comments(parent_id);
+
+-- 关联表索引
+CREATE INDEX idx_user_courses_user_id ON user_courses(user_id);
+CREATE INDEX idx_user_courses_course_id ON user_courses(course_id);
+CREATE INDEX idx_note_likes_note_id ON note_likes(note_id);
+CREATE INDEX idx_favorites_note_id ON favorites(note_id);
+```
+
+### 4.5 ER图
+
+```
+┌─────────────┐     ┌─────────────────┐     ┌─────────────┐
+│    User     │────▶│   UserCourse    │◀────│   Course    │
+│             │     │                 │     │             │
+│ - id        │     │ - user_id       │     │ - id        │
+│ - username  │     │ - course_id     │     │ - name      │
+│ - email     │     │ - joined_at     │     │ - code      │
+│ - password  │     │ - role          │     │ - teacher_id│
+│ - nickname  │     │ - status        │     │ - credit    │
+│ - avatar    │     └─────────────────┘     │ - semester  │
+│ - role      │                             │ - status    │
+│ - status    │                             └─────────────┘
+└─────────────┘                                     │
+       │                                            │
+       │                                            │
+       ▼                                            ▼
+┌─────────────┐                             ┌─────────────┐
+│    Note     │                             │   Comment   │
+│             │                             │             │
+│ - id        │◀────────────────────────────│ - id        │
+│ - title     │                             │ - content   │
+│ - content   │                             │ - user_id   │
+│ - file_path │                             │ - note_id   │
+│ - user_id   │                             │ - parent_id │
+│ - course_id │                             │ - like_count│
+│ - tags      │                             │ - status    │
+│ - view_count│                             └─────────────┘
+│ - like_count│
+│ - status    │
+└─────────────┘
+       │
+       ▼
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  NoteLike   │     │  Favorite   │     │CommentLike  │
+│             │     │             │     │             │
+│ - user_id   │     │ - user_id   │     │ - user_id   │
+│ - note_id   │     │ - note_id   │     │ - comment_id│
+│ - created_at│     │ - created_at│     │ - created_at│
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+---
+
+## 5. 接口设计
+
+### 5.1 API设计规范
+
+#### 5.1.1 RESTful API规范
+- 使用HTTP动词表示操作类型
+- 使用名词表示资源
+- 使用HTTP状态码表示响应状态
+- 统一的响应格式
+
+#### 5.1.2 URL设计规范
+```
+GET    /api/v1/users          # 获取用户列表
+POST   /api/v1/users          # 创建用户
+GET    /api/v1/users/:id      # 获取指定用户
+PUT    /api/v1/users/:id      # 更新指定用户
+DELETE /api/v1/users/:id      # 删除指定用户
+```
+
+#### 5.1.3 响应格式规范
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    // 响应数据
+  },
+  "timestamp": "2024-01-01T00:00:00Z"
+}
+```
+
+### 5.2 用户相关接口
+
+#### 5.2.1 用户注册
+```
+POST /api/v1/auth/register
+
+Request Body:
+{
+  "username": "string",
+  "email": "string",
+  "password": "string",
+  "nickname": "string"
+}
+
+Response:
+{
+  "code": 200,
+  "message": "注册成功",
+  "data": {
+    "user_id": 1,
+    "username": "testuser",
+    "email": "test@example.com",
+    "nickname": "测试用户"
+  }
+}
+```
+
+#### 5.2.2 用户登录
+```
+POST /api/v1/auth/login
+
+Request Body:
+{
+  "username": "string",
+  "password": "string"
+}
+
+Response:
+{
+  "code": 200,
+  "message": "登录成功",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": 1,
+      "username": "testuser",
+      "email": "test@example.com",
+      "nickname": "测试用户",
+      "avatar": "/uploads/avatars/default.jpg",
+      "role": "student"
+    }
+  }
+}
+```
+
+#### 5.2.3 获取用户信息
+```
+GET /api/v1/users/profile
+Authorization: Bearer <token>
+
+Response:
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": {
+    "id": 1,
+    "username": "testuser",
+    "email": "test@example.com",
+    "nickname": "测试用户",
+    "avatar": "/uploads/avatars/user1.jpg",
+    "role": "student",
+    "created_at": "2024-01-01T00:00:00Z",
+    "last_login_at": "2024-01-01T12:00:00Z"
+  }
+}
+```
+
+### 5.3 课程相关接口
+
+#### 5.3.1 获取课程列表
+```
+GET /api/v1/courses?page=1&limit=10&search=数学
+
+Response:
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": {
+    "courses": [
+      {
+        "id": 1,
+        "name": "高等数学",
+        "code": "MATH001",
+        "description": "高等数学基础课程",
+        "teacher": {
+          "id": 2,
+          "nickname": "张教授"
+        },
+        "credit": 4,
+        "semester": "2024春",
+        "student_count": 120
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 10
+  }
+}
+```
+
+#### 5.3.2 加入课程
+```
+POST /api/v1/courses/:id/join
+Authorization: Bearer <token>
+
+Response:
+{
+  "code": 200,
+  "message": "加入课程成功",
+  "data": {
+    "course_id": 1,
+    "joined_at": "2024-01-01T12:00:00Z"
+  }
+}
+```
+
+### 5.4 笔记相关接口
+
+#### 5.4.1 上传笔记
+```
+POST /api/v1/notes
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+
+Form Data:
+- title: "第一章笔记"
+- description: "高等数学第一章学习笔记"
+- course_id: 1
+- tags: "数学,极限,导数"
+- file: <file>
+
+Response:
+{
+  "code": 200,
+  "message": "上传成功",
+  "data": {
+    "id": 1,
+    "title": "第一章笔记",
+    "description": "高等数学第一章学习笔记",
+    "file_path": "/uploads/notes/note_1.pdf",
+    "file_size": 1024000,
+    "file_type": "application/pdf",
+    "tags": "数学,极限,导数",
+    "status": "pending"
+  }
+}
+```
+
+#### 5.4.2 获取笔记列表
+```
+GET /api/v1/notes?course_id=1&page=1&limit=10&search=导数
+
+Response:
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": {
+    "notes": [
+      {
+        "id": 1,
+        "title": "第一章笔记",
+        "description": "高等数学第一章学习笔记",
+        "user": {
+          "id": 1,
+          "nickname": "学生A",
+          "avatar": "/uploads/avatars/user1.jpg"
+        },
+        "course": {
+          "id": 1,
+          "name": "高等数学",
+          "code": "MATH001"
+        },
+        "file_type": "application/pdf",
+        "file_size": 1024000,
+        "tags": "数学,极限,导数",
+        "view_count": 25,
+        "like_count": 8,
+        "created_at": "2024-01-01T10:00:00Z"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 10
+  }
+}
+```
+
+### 5.5 互动相关接口
+
+#### 5.5.1 点赞笔记
+```
+POST /api/v1/notes/:id/like
+Authorization: Bearer <token>
+
+Response:
+{
+  "code": 200,
+  "message": "点赞成功",
+  "data": {
+    "note_id": 1,
+    "liked": true,
+    "like_count": 9
+  }
+}
+```
+
+#### 5.5.2 添加评论
+```
+POST /api/v1/notes/:id/comments
+Authorization: Bearer <token>
+
+Request Body:
+{
+  "content": "这个笔记很有用，谢谢分享！",
+  "parent_id": null
+}
+
+Response:
+{
+  "code": 200,
+  "message": "评论成功",
+  "data": {
+    "id": 1,
+    "content": "这个笔记很有用，谢谢分享！",
+    "user": {
+      "id": 2,
+      "nickname": "学生B",
+      "avatar": "/uploads/avatars/user2.jpg"
+    },
+    "created_at": "2024-01-01T14:00:00Z"
+  }
+}
+```
+
+---
+
+## 6. 前端界面设计
+
+### 6.1 设计原则
+
+#### 6.1.1 用户体验原则
+- **简洁性**：界面简洁明了，避免冗余元素
+- **一致性**：保持设计风格和交互方式的一致性
+- **可用性**：确保功能易于理解和使用
+- **响应性**：支持多设备和多分辨率
+
+#### 6.1.2 视觉设计原则
+- **层次性**：通过视觉层次引导用户注意力
+- **对比性**：使用颜色和字体对比突出重点
+- **平衡性**：保持页面元素的视觉平衡
+- **统一性**：使用统一的设计语言和组件
+
+### 6.2 色彩方案
+
+基于Element Plus的默认主题色彩：
+
+```css
+/* 主色调 */
+--el-color-primary: #409eff;        /* 主要按钮、链接 */
+--el-color-success: #67c23a;        /* 成功状态 */
+--el-color-warning: #e6a23c;        /* 警告状态 */
+--el-color-danger: #f56c6c;         /* 错误状态 */
+--el-color-info: #909399;           /* 信息状态 */
+
+/* 辅助色彩 */
+--el-bg-color: #ffffff;             /* 背景色 */
+--el-bg-color-page: #f2f3f5;        /* 页面背景 */
+--el-text-color-primary: #303133;   /* 主要文字 */
+--el-text-color-regular: #606266;   /* 常规文字 */
+--el-text-color-secondary: #909399; /* 次要文字 */
+--el-text-color-placeholder: #a8abb2; /* 占位文字 */
+
+/* 边框色彩 */
+--el-border-color: #dcdfe6;         /* 一级边框 */
+--el-border-color-light: #e4e7ed;   /* 二级边框 */
+--el-border-color-lighter: #ebeef5; /* 三级边框 */
+--el-border-color-extra-light: #f2f6fc; /* 四级边框 */
+```
+
+### 6.3 布局设计
+
+#### 6.3.1 整体布局
+
+```vue
+<template>
+  <div class="app-container">
+    <!-- 顶部导航栏 -->
+    <el-header class="app-header">
+      <AppHeader />
+    </el-header>
+    
+    <!-- 主体内容区域 -->
+    <el-container class="app-main">
+      <!-- 侧边栏（可选） -->
+      <el-aside v-if="showSidebar" class="app-sidebar">
+        <AppSidebar />
+      </el-aside>
+      
+      <!-- 内容区域 -->
+      <el-main class="app-content">
+        <router-view />
+      </el-main>
+    </el-container>
+    
+    <!-- 底部信息栏 -->
+    <el-footer class="app-footer">
+      <AppFooter />
+    </el-footer>
+  </div>
+</template>
+```
+
+#### 6.3.2 响应式设计
+
+```css
+/* 桌面端 */
+@media (min-width: 1200px) {
+  .app-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .app-sidebar {
+    width: 240px;
+  }
+}
+
+/* 平板端 */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .app-sidebar {
+    width: 200px;
+  }
+}
+
+/* 移动端 */
+@media (max-width: 767px) {
+  .app-sidebar {
+    position: fixed;
+    left: -240px;
+    transition: left 0.3s;
+  }
+  
+  .app-sidebar.show {
+    left: 0;
+  }
+}
+```
+
+### 6.4 主要页面设计
+
+#### 6.4.1 首页设计
+
+```vue
+<template>
+  <div class="home-page">
+    <!-- 轮播图区域 -->
+    <section class="hero-section">
+      <el-carousel height="400px">
+        <el-carousel-item v-for="item in banners" :key="item.id">
+          <div class="banner-item">
+            <img :src="item.image" :alt="item.title" />
+            <div class="banner-content">
+              <h2>{{ item.title }}</h2>
+              <p>{{ item.description }}</p>
+              <el-button type="primary" size="large">
+                {{ item.buttonText }}
+              </el-button>
+            </div>
+          </div>
+        </el-carousel-item>
+      </el-carousel>
+    </section>
+    
+    <!-- 功能导航区域 -->
+    <section class="features-section">
+      <div class="container">
+        <h2 class="section-title">主要功能</h2>
+        <el-row :gutter="24">
+          <el-col :xs="12" :sm="6" v-for="feature in features" :key="feature.id">
+            <div class="feature-card">
+              <el-icon :size="48" class="feature-icon">
+                <component :is="feature.icon" />
+              </el-icon>
+              <h3>{{ feature.title }}</h3>
+              <p>{{ feature.description }}</p>
+            </div>
+          </el-col>
+        </el-row>
+      </div>
+    </section>
+    
+    <!-- 热门课程区域 -->
+    <section class="courses-section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">热门课程</h2>
+          <el-button type="text" @click="$router.push('/courses')">
+            查看更多 <el-icon><ArrowRight /></el-icon>
+          </el-button>
+        </div>
+        <el-row :gutter="24">
+          <el-col :xs="24" :sm="12" :md="8" :lg="6" 
+                  v-for="course in popularCourses" :key="course.id">
+            <CourseCard :course="course" />
+          </el-col>
+        </el-row>
+      </div>
+    </section>
+    
+    <!-- 最新笔记区域 -->
+    <section class="notes-section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">最新笔记</h2>
+          <el-button type="text" @click="$router.push('/notes')">
+            查看更多 <el-icon><ArrowRight /></el-icon>
+          </el-button>
+        </div>
+        <el-row :gutter="24">
+          <el-col :xs="24" :sm="12" :md="8" 
+                  v-for="note in latestNotes" :key="note.id">
+            <NoteCard :note="note" />
+          </el-col>
+        </el-row>
+      </div>
+    </section>
+  </div>
+</template>
+```
+
+#### 6.4.2 课程列表页面
+
+```vue
+<template>
+  <div class="courses-page">
+    <!-- 搜索和筛选区域 -->
+    <div class="search-section">
+      <el-card>
+        <el-row :gutter="16">
+          <el-col :span="8">
+            <el-input
+              v-model="searchForm.keyword"
+              placeholder="搜索课程名称或代码"
+              clearable
+              @keyup.enter="handleSearch"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+          </el-col>
+          <el-col :span="4">
+            <el-select v-model="searchForm.semester" placeholder="学期">
+              <el-option label="全部" value="" />
+              <el-option label="2024春" value="2024春" />
+              <el-option label="2024秋" value="2024秋" />
+            </el-select>
+          </el-col>
+          <el-col :span="4">
+            <el-select v-model="searchForm.credit" placeholder="学分">
+              <el-option label="全部" value="" />
+              <el-option label="1-2学分" value="1-2" />
+              <el-option label="3-4学分" value="3-4" />
+              <el-option label="5+学分" value="5+" />
+            </el-select>
+          </el-col>
+          <el-col :span="4">
+            <el-button type="primary" @click="handleSearch">
+              <el-icon><Search /></el-icon> 搜索
+            </el-button>
+          </el-col>
+          <el-col :span="4">
+            <el-button @click="handleReset">
+              <el-icon><Refresh /></el-icon> 重置
+            </el-button>
+          </el-col>
+        </el-row>
+      </el-card>
+    </div>
+    
+    <!-- 课程列表区域 -->
+    <div class="courses-list">
+      <el-row :gutter="24">
+        <el-col :xs="24" :sm="12" :md="8" :lg="6" 
+                v-for="course in courses" :key="course.id">
+          <CourseCard :course="course" @join="handleJoinCourse" />
+        </el-col>
+      </el-row>
+      
+      <!-- 空状态 -->
+      <el-empty v-if="courses.length === 0" description="暂无课程数据" />
+      
+      <!-- 分页 -->
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="pagination.page"
+          v-model:page-size="pagination.limit"
+          :total="pagination.total"
+          :page-sizes="[12, 24, 48]"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
+    </div>
+  </div>
+</template>
+```
+
+#### 6.4.3 笔记详情页面
+
+```vue
+<template>
+  <div class="note-detail-page">
+    <el-row :gutter="24">
+      <!-- 主要内容区域 -->
+      <el-col :xs="24" :lg="16">
+        <el-card class="note-content">
+          <!-- 笔记头部信息 -->
+          <div class="note-header">
+            <h1 class="note-title">{{ note.title }}</h1>
+            <div class="note-meta">
+              <el-tag type="info">{{ note.course.name }}</el-tag>
+              <span class="meta-item">
+                <el-icon><User /></el-icon>
+                {{ note.user.nickname }}
+              </span>
+              <span class="meta-item">
+                <el-icon><Calendar /></el-icon>
+                {{ formatDate(note.created_at) }}
+              </span>
+              <span class="meta-item">
+                <el-icon><View /></el-icon>
+                {{ note.view_count }} 次浏览
+              </span>
+            </div>
+            <div class="note-tags">
+              <el-tag 
+                v-for="tag in note.tags.split(',')" 
+                :key="tag" 
+                size="small"
+              >
+                {{ tag }}
+              </el-tag>
+            </div>
+          </div>
+          
+          <!-- 笔记描述 -->
+          <div class="note-description">
+            <p>{{ note.description }}</p>
+          </div>
+          
+          <!-- 文件预览/下载 -->
+          <div class="note-file">
+            <el-card>
+              <div class="file-info">
+                <el-icon :size="24"><Document /></el-icon>
+                <div class="file-details">
+                  <div class="file-name">{{ getFileName(note.file_path) }}</div>
+                  <div class="file-size">{{ formatFileSize(note.file_size) }}</div>
+                </div>
+                <div class="file-actions">
+                  <el-button type="primary" @click="handlePreview">
+                    <el-icon><View /></el-icon> 预览
+                  </el-button>
+                  <el-button @click="handleDownload">
+                    <el-icon><Download /></el-icon> 下载
+                  </el-button>
+                </div>
+              </div>
+            </el-card>
+          </div>
+          
+          <!-- 互动按钮 -->
+          <div class="note-actions">
+            <el-button 
+              :type="note.is_liked ? 'primary' : 'default'"
+              @click="handleLike"
+            >
+              <el-icon><Star /></el-icon>
+              {{ note.is_liked ? '已点赞' : '点赞' }}
+              ({{ note.like_count }})
+            </el-button>
+            <el-button 
+              :type="note.is_favorited ? 'warning' : 'default'"
+              @click="handleFavorite"
+            >
+              <el-icon><Collection /></el-icon>
+              {{ note.is_favorited ? '已收藏' : '收藏' }}
+            </el-button>
+            <el-button @click="handleShare">
+              <el-icon><Share /></el-icon> 分享
+            </el-button>
+          </div>
+        </el-card>
+        
+        <!-- 评论区域 -->
+        <el-card class="comments-section">
+          <template #header>
+            <div class="comments-header">
+              <h3>评论 ({{ comments.length }})</h3>
+            </div>
+          </template>
+          
+          <!-- 发表评论 -->
+          <div class="comment-form" v-if="isLoggedIn">
+            <el-input
+              v-model="commentForm.content"
+              type="textarea"
+              :rows="3"
+              placeholder="写下你的评论..."
+            />
+            <div class="comment-actions">
+              <el-button type="primary" @click="handleSubmitComment">
+                发表评论
+              </el-button>
+            </div>
+          </div>
+          
+          <!-- 评论列表 -->
+          <div class="comments-list">
+            <CommentItem 
+              v-for="comment in comments" 
+              :key="comment.id"
+              :comment="comment"
+              @reply="handleReply"
+              @like="handleCommentLike"
+            />
+          </div>
+        </el-card>
+      </el-col>
+      
+      <!-- 侧边栏 -->
+      <el-col :xs="24" :lg="8">
+        <!-- 作者信息 -->
+        <el-card class="author-card">
+          <div class="author-info">
+            <el-avatar :size="60" :src="note.user.avatar" />
+            <div class="author-details">
+              <h4>{{ note.user.nickname }}</h4>
+              <p>{{ note.user.role === 'teacher' ? '教师' : '学生' }}</p>
+            </div>
+          </div>
+          <el-button type="primary" size="small" block>
+            关注
+          </el-button>
+        </el-card>
+        
+        <!-- 相关笔记 -->
+        <el-card class="related-notes">
+          <template #header>
+            <h4>相关笔记</h4>
+          </template>
+          <div class="related-list">
+            <div 
+              v-for="relatedNote in relatedNotes" 
+              :key="relatedNote.id"
+              class="related-item"
+              @click="$router.push(`/notes/${relatedNote.id}`)"
+            >
+              <h5>{{ relatedNote.title }}</h5>
+              <p>{{ relatedNote.user.nickname }}</p>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+  </div>
+</template>
+```
+
+### 6.5 组件设计
+
+#### 6.5.1 课程卡片组件
+
+```vue
+<template>
+  <el-card class="course-card" shadow="hover">
+    <div class="course-header">
+      <h3 class="course-name">{{ course.name }}</h3>
+      <el-tag size="small">{{ course.code }}</el-tag>
+    </div>
+    
+    <div class="course-info">
+      <p class="course-description">{{ course.description }}</p>
+      
+      <div class="course-meta">
+        <div class="meta-item">
+          <el-icon><User /></el-icon>
+          <span>{{ course.teacher.nickname }}</span>
+        </div>
+        <div class="meta-item">
+          <el-icon><Trophy /></el-icon>
+          <span>{{ course.credit }} 学分</span>
+        </div>
+        <div class="meta-item">
+          <el-icon><Calendar /></el-icon>
+          <span>{{ course.semester }}</span>
+        </div>
+        <div class="meta-item">
+          <el-icon><UserFilled /></el-icon>
+          <span>{{ course.student_count }} 人</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="course-actions">
+      <el-button 
+        type="primary" 
+        size="small" 
+        @click="handleJoin"
+        :disabled="course.is_joined"
+      >
+        {{ course.is_joined ? '已加入' : '加入课程' }}
+      </el-button>
+      <el-button size="small" @click="handleViewDetails">
+        查看详情
+      </el-button>
+    </div>
+  </el-card>
+</template>
+
+<script setup>
+const props = defineProps({
+  course: {
+    type: Object,
+    required: true
+  }
+})
+
+const emit = defineEmits(['join'])
+
+const handleJoin = () => {
+  emit('join', props.course.id)
+}
+
+const handleViewDetails = () => {
+  // 跳转到课程详情页
+}
+</script>
+
+<style scoped>
+.course-card {
+  margin-bottom: 20px;
+  transition: transform 0.2s;
+}
+
+.course-card:hover {
+  transform: translateY(-2px);
+}
+
+.course-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.course-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.course-description {
+  color: var(--el-text-color-regular);
+  font-size: 14px;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.course-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.meta-item .el-icon {
+  margin-right: 4px;
+}
+
+.course-actions {
+  display: flex;
+  gap: 8px;
+}
+</style>
+```
+
+#### 6.5.2 笔记卡片组件
+
+```vue
+<template>
+  <el-card class="note-card" shadow="hover">
+    <div class="note-header">
+      <h3 class="note-title" @click="handleViewDetails">
+        {{ note.title }}
+      </h3>
+      <el-dropdown trigger="click">
+        <el-icon class="more-icon"><MoreFilled /></el-icon>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item @click="handleDownload">
+              <el-icon><Download /></el-icon> 下载
+            </el-dropdown-item>
+            <el-dropdown-item @click="handleShare">
+              <el-icon><Share /></el-icon> 分享
+            </el-dropdown-item>
+            <el-dropdown-item @click="handleReport">
+              <el-icon><Warning /></el-icon> 举报
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </div>
+    
+    <div class="note-content">
+      <p class="note-description">{{ note.description }}</p>
+      
+      <div class="note-file-info">
+        <el-icon class="file-icon"><Document /></el-icon>
+        <span class="file-name">{{ getFileName(note.file_path) }}</span>
+        <span class="file-size">{{ formatFileSize(note.file_size) }}</span>
+      </div>
+      
+      <div class="note-tags">
+        <el-tag 
+          v-for="tag in note.tags.split(',').slice(0, 3)" 
+          :key="tag" 
+          size="small"
+          effect="plain"
+        >
+          {{ tag }}
+        </el-tag>
+        <span v-if="note.tags.split(',').length > 3" class="more-tags">
+          +{{ note.tags.split(',').length - 3 }}
+        </span>
+      </div>
+    </div>
+    
+    <div class="note-footer">
+      <div class="note-meta">
+        <div class="author-info">
+          <el-avatar :size="24" :src="note.user.avatar" />
+          <span class="author-name">{{ note.user.nickname }}</span>
+        </div>
+        <div class="course-info">
+          <el-tag type="info" size="small">{{ note.course.name }}</el-tag>
+        </div>
+      </div>
+      
+      <div class="note-stats">
+        <span class="stat-item">
+          <el-icon><View /></el-icon>
+          {{ note.view_count }}
+        </span>
+        <span class="stat-item">
+          <el-icon><Star /></el-icon>
+          {{ note.like_count }}
+        </span>
+        <span class="stat-item">
+          <el-icon><ChatDotRound /></el-icon>
+          {{ note.comment_count || 0 }}
+        </span>
+      </div>
+      
+      <div class="note-actions">
+        <el-button 
+          size="small" 
+          :type="note.is_liked ? 'primary' : 'default'"
+          @click="handleLike

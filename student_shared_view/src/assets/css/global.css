@@ -1,0 +1,229 @@
+/* 全局样式 - 暖色调主题 */
+:root {
+  /* 主色调 - 暖橙色系 */
+  --primary-color: #ff7f50;
+  --primary-light: #ff9a73;
+  --primary-dark: #e6633d;
+  
+  /* 辅助色 - 暖黄色系 */
+  --secondary-color: #ffa726;
+  --secondary-light: #ffb74d;
+  --secondary-dark: #f57c00;
+  
+  /* 背景色 - 暖米色系 */
+  --bg-primary: #fef7f0;
+  --bg-secondary: #fff8f3;
+  --bg-card: #ffffff;
+  
+  /* 文字色 */
+  --text-primary: #5d4037;
+  --text-secondary: #8d6e63;
+  --text-light: #a1887f;
+  
+  /* 边框色 */
+  --border-color: #efebe9;
+  --border-hover: #d7ccc8;
+  
+  /* 成功色 */
+  --success-color: #66bb6a;
+  --success-light: #81c784;
+  
+  /* 警告色 */
+  --warning-color: #ffa726;
+  --warning-light: #ffb74d;
+  
+  /* 错误色 */
+  --error-color: #ef5350;
+  --error-light: #e57373;
+  
+  /* 阴影 */
+  --shadow-light: 0 2px 8px rgba(255, 127, 80, 0.1);
+  --shadow-medium: 0 4px 16px rgba(255, 127, 80, 0.15);
+  --shadow-heavy: 0 8px 32px rgba(255, 127, 80, 0.2);
+}
+
+/* 重置样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+/* Element Plus 主题定制 */
+.el-button--primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.el-button--primary:hover {
+  background-color: var(--primary-light);
+  border-color: var(--primary-light);
+}
+
+.el-button--primary:active {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+.el-menu--horizontal .el-menu-item:hover {
+  background-color: var(--bg-secondary);
+  color: var(--primary-color);
+}
+
+.el-menu--horizontal .el-menu-item.is-active {
+  border-bottom-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.el-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-light);
+  transition: all 0.3s ease;
+}
+
+.el-card:hover {
+  box-shadow: var(--shadow-medium);
+  transform: translateY(-2px);
+}
+
+.el-input__inner {
+  border-color: var(--border-color);
+}
+
+.el-input__inner:focus {
+  border-color: var(--primary-color);
+}
+
+.el-pagination .el-pager li.active {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.el-pagination .el-pager li:hover {
+  color: var(--primary-color);
+}
+
+/* 通用类 */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.page-header {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  padding: 40px 0;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.page-subtitle {
+  font-size: 1.2rem;
+  opacity: 0.9;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  margin: 20px 0;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-primary {
+  color: var(--primary-color);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.mb-20 {
+  margin-bottom: 20px;
+}
+
+.mt-20 {
+  margin-top: 20px;
+}
+
+.p-20 {
+  padding: 20px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 15px;
+  }
+  
+  .page-title {
+    font-size: 2rem;
+  }
+  
+  .card-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+}
+
+/* 动画效果 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-up-enter-from {
+  transform: translateY(20px);
+  opacity: 0;
+}
+
+.slide-up-leave-to {
+  transform: translateY(-20px);
+  opacity: 0;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-dark);
+}
