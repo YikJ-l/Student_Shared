@@ -24,18 +24,6 @@
             </el-input>
           </div>
           
-          <!-- 快速搜索标签 -->
-          <div class="quick-tags" v-if="!searchQuery">
-            <span class="tags-label">热门搜索：</span>
-            <el-tag
-              v-for="tag in hotTags"
-              :key="tag"
-              class="hot-tag"
-              @click="searchQuery = tag; handleSearch()"
-            >
-              {{ tag }}
-            </el-tag>
-          </div>
         </div>
       </div>
     </div>
@@ -85,25 +73,12 @@
                 </el-checkbox-group>
               </div>
               
-              <!-- 时间范围 -->
-              <div class="filter-section">
-                <h4 class="filter-title">发布时间</h4>
-                <el-radio-group v-model="filters.timeRange">
-                  <el-radio value="all">全部</el-radio>
-                  <el-radio value="week">最近一周</el-radio>
-                  <el-radio value="month">最近一月</el-radio>
-                  <el-radio value="year">最近一年</el-radio>
-                </el-radio-group>
-              </div>
-              
               <!-- 排序方式 -->
               <div class="filter-section">
                 <h4 class="filter-title">排序方式</h4>
                 <el-radio-group v-model="filters.sortBy">
-                  <el-radio value="relevance">相关性</el-radio>
                   <el-radio value="time">时间</el-radio>
                   <el-radio value="popularity">热度</el-radio>
-                  <el-radio value="rating">评分</el-radio>
                 </el-radio-group>
               </div>
             </el-card>
@@ -203,14 +178,13 @@
                         <h4 class="item-title" v-html="note && note.title ? highlightText(note.title) : ''"></h4>
                         <p class="item-meta">
                           <el-tag size="small" type="success">{{ note.course_name || '' }}</el-tag>
-                          <span class="author">by {{ note.author || '' }}</span>
                           <span class="date">{{ note.created_at ? formatDate(note.created_at) : '' }}</span>
                         </p>
                         <p class="item-description" v-html="note && note.excerpt ? highlightText(note.excerpt) : ''"></p>
                         <div class="item-stats">
-                          <span><el-icon><View /></el-icon> {{ note.view_count }}</span>
-                          <span><el-icon><ChatDotRound /></el-icon> {{ note.comment_count }}</span>
-                          <span><el-icon><Star /></el-icon> {{ note.like_count }}</span>
+                          <span><el-icon><View /></el-icon> {{ note.view_count ?? 0 }}</span>
+                          <span><el-icon><ChatDotRound /></el-icon> {{ note.comment_count ?? 0 }}</span>
+                          <span><el-icon><Star /></el-icon> {{ note.like_count ?? 0 }}</span>
                         </div>
                       </div>
                       <div class="item-actions">
@@ -237,17 +211,15 @@
                       <div class="item-content">
                         <h4 class="item-title" v-html="course && course.name ? highlightText(course.name) : ''"></h4>
                         <p class="item-meta">
-                          <el-tag size="small">{{ course.category || '' }}</el-tag>
-                          <el-tag size="small" :type="getDifficultyType(course.difficulty)">
-                            {{ getDifficultyText(course.difficulty) }}
-                          </el-tag>
-                          <span class="instructor">{{ course.instructor || '' }}</span>
+                          <el-tag size="small">{{ course.school || '' }}</el-tag>
+                          <el-tag size="small">{{ course.department || '' }}</el-tag>
+                          <span class="instructor">{{ course.teacher || '' }}</span>
                         </p>
                         <p class="item-description" v-html="course && course.description ? highlightText(course.description) : ''"></p>
                         <div class="item-stats">
-                          <span><el-icon><User /></el-icon> {{ course.student_count }} 学生</span>
-                          <span><el-icon><Document /></el-icon> {{ course.note_count }} 笔记</span>
-                          <el-rate v-model="course.rating" disabled show-score text-color="#ff9900" />
+                          <!-- 语义检索结果暂不包含以下统计，展示为0或隐藏 -->
+                          <span><el-icon><User /></el-icon> {{ course.student_count ?? 0 }} 学生</span>
+                          <span><el-icon><Document /></el-icon> {{ course.note_count ?? 0 }} 笔记</span>
                         </div>
                       </div>
                       <div class="item-actions">
@@ -350,20 +322,15 @@ export default {
     const currentPage = ref(1)
     const pageSize = ref(10)
     
-    // 热门搜索标签
-    const hotTags = ref([
-      '微积分', '数据结构', '线性代数', '计算机网络', '概率论',
-      '算法', '操作系统', '数据库', '机器学习', '高等数学'
-    ])
     
     // 筛选条件
     const filters = reactive({
       types: ['notes', 'courses', 'users'],
       categories: [],
       difficulty: [],
-      timeRange: 'all',
-      sortBy: 'relevance'
+      sortBy: 'time'
     })
+
     
     // 搜索结果
     const results = reactive({
@@ -375,79 +342,6 @@ export default {
     // 防止无限循环的标志
     let isUpdatingFilters = false
     
-    // 模拟搜索数据
-    const mockSearchData = {
-      notes: [
-        {
-          id: 1,
-          title: '微积分重点知识总结',
-          excerpt: '本笔记详细总结了微积分的重点知识点，包括导数、积分的基本概念和计算方法，适合期末复习使用。',
-          course_name: '高等数学A',
-          author: '张同学',
-          view_count: 1245,
-          comment_count: 23,
-          like_count: 89,
-          created_at: '2024-02-15T10:30:00Z'
-        },
-        {
-          id: 2,
-          title: '数据结构与算法学习心得',
-          excerpt: '分享学习数据结构和算法的心得体会，包括各种数据结构的特点、应用场景以及常见算法的实现思路。',
-          course_name: '数据结构',
-          author: '李同学',
-          view_count: 892,
-          comment_count: 15,
-          like_count: 67,
-          created_at: '2024-02-10T14:20:00Z'
-        }
-      ],
-      courses: [
-        {
-          id: 1,
-          name: '高等数学A',
-          description: '本课程涵盖微积分、线性代数等数学基础知识，为后续专业课程打下坚实基础。',
-          category: '数学',
-          difficulty: 'intermediate',
-          instructor: '王教授',
-          student_count: 1250,
-          note_count: 89,
-          rating: 4.5
-        },
-        {
-          id: 2,
-          name: '数据结构与算法',
-          description: '深入学习各种数据结构和算法，培养程序设计和问题解决能力。',
-          category: '计算机',
-          difficulty: 'advanced',
-          instructor: '刘教授',
-          student_count: 980,
-          note_count: 156,
-          rating: 4.8
-        }
-      ],
-      users: [
-        {
-          id: 1,
-          username: '学霸小王',
-          avatar: '',
-          school: '清华大学',
-          major: '计算机科学与技术',
-          bio: '热爱编程和数学，喜欢分享学习心得',
-          note_count: 45,
-          like_count: 892
-        },
-        {
-          id: 2,
-          username: '数学达人',
-          avatar: '',
-          school: '北京大学',
-          major: '数学与应用数学',
-          bio: '专注数学学习，擅长解题技巧分享',
-          note_count: 67,
-          like_count: 1234
-        }
-      ]
-    }
     
     // 计算属性
     const totalResults = computed(() => {
@@ -489,52 +383,36 @@ export default {
         ElMessage.warning('请输入搜索关键词')
         return
       }
-      
       searching.value = true
       const startTime = Date.now()
-      
       try {
-        // 这里应该调用真实的搜索API
-        // const response = await searchAPI.search({
-        //   query: searchQuery.value,
-        //   filters: filters,
-        //   page: currentPage.value,
-        //   pageSize: pageSize.value
-        // })
+        // 简单笔记搜索：统一按笔记查询
+        const typeParam = 'notes'
+        // 排序映射到后端可识别字段
+        const sortMap = { relevance: 'created_at', time: 'created_at', popularity: 'like_count' }
+        const sortByParam = sortMap[filters.sortBy] || 'created_at'
         
-        // 模拟搜索延迟
-        await new Promise(resolve => setTimeout(resolve, 800))
-        
-        // 模拟搜索结果
-        const query = searchQuery.value.toLowerCase()
-        
-        // 过滤笔记
-        results.notes = mockSearchData.notes.filter(note => 
-          note.title.toLowerCase().includes(query) || 
-          note.excerpt.toLowerCase().includes(query) ||
-          note.course_name.toLowerCase().includes(query)
-        )
-        
-        // 过滤课程
-        results.courses = mockSearchData.courses.filter(course => 
-          course.name.toLowerCase().includes(query) || 
-          course.description.toLowerCase().includes(query)
-        )
-        
-        // 过滤用户
-        results.users = mockSearchData.users.filter(user => 
-          user.username.toLowerCase().includes(query) || 
-          user.school.toLowerCase().includes(query) ||
-          user.major.toLowerCase().includes(query)
-        )
-        
+        const params = {
+          keyword: searchQuery.value,
+          page: currentPage.value,
+          page_size: pageSize.value,
+          sort_by: sortByParam,
+          order: 'desc'
+        }
+
+        const response = await searchAPI.searchNotes(params)
+        const notes = Array.isArray(response?.notes) ? response.notes : []
+        // 兼容当前展示结构：补充 excerpt 字段
+        results.notes = notes.map(n => ({
+          ...n,
+          excerpt: n.description || ''
+        }))
+        results.courses = []
+        results.users = []
         hasSearched.value = true
         searchTime.value = Date.now() - startTime
         currentPage.value = 1
-        
-        // 更新URL
-        router.push({ query: { q: searchQuery.value } })
-        
+        router.push({ query: { q: searchQuery.value, type: typeParam, sort_by: sortByParam } })
       } catch (error) {
         ElMessage.error('搜索失败，请稍后重试')
       } finally {
@@ -551,8 +429,7 @@ export default {
         types: ['notes', 'courses', 'users'],
         categories: [],
         difficulty: [],
-        timeRange: 'all',
-        sortBy: 'relevance'
+        sortBy: 'time'
       })
       
       // 重置标志并手动触发搜索
@@ -650,7 +527,6 @@ export default {
       activeResultType,
       currentPage,
       pageSize,
-      hotTags,
       filters,
       results,
       totalResults,

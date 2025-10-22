@@ -42,11 +42,7 @@
               <div class="stat-item">
                 <div class="stat-number">{{ course.note_count || 0 }}</div>
                 <div class="stat-label">相关笔记</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-number">{{ course.view_count || 0 }}</div>
-                <div class="stat-label">浏览次数</div>
-              </div>
+              </div>             
               <div class="stat-item">
                 <div class="stat-number">{{ course.student_count || 0 }}</div>
                 <div class="stat-label">学习人数</div>
@@ -94,7 +90,7 @@
                       <div class="note-meta">
                         <span class="note-author">
                           <el-icon><User /></el-icon>
-                          {{ note.author }}
+                          {{ note.username || '未知作者' }}
                         </span>
                         <span class="note-time">{{ formatTime(note.created_at) }}</span>
                       </div>
@@ -102,12 +98,12 @@
                     <p class="note-preview">{{ getPreviewText(note.content) }}</p>
                     <div class="note-footer">
                       <div class="note-stats">
-                        <span><el-icon><View /></el-icon> {{ note.view_count || 0 }}</span>
+
                         <span><el-icon><ChatDotRound /></el-icon> {{ note.comment_count || 0 }}</span>
                         <span><el-icon><Star /></el-icon> {{ note.like_count || 0 }}</span>
                       </div>
                       <div class="note-tags">
-                        <el-tag v-for="tag in note.tags" :key="tag" size="small" type="info" effect="plain">
+                        <el-tag v-for="tag in (note.tags || [])" :key="tag" size="small" type="info" effect="plain">
                           {{ tag }}
                         </el-tag>
                       </div>
@@ -180,7 +176,7 @@
                     <p>{{ recommendedCourse.teacher }}</p>
                     <div class="recommended-stats">
                       <span><el-icon><Document /></el-icon> {{ recommendedCourse.note_count || 0 }}</span>
-                      <span><el-icon><View /></el-icon> {{ recommendedCourse.view_count || 0 }}</span>
+                      <span><el-icon><User /></el-icon> {{ recommendedCourse.student_count || 0 }}</span>
                     </div>
                   </div>
                 </div>
@@ -315,7 +311,7 @@ export default {
     // 获取相关笔记
     const fetchRelatedNotes = async (courseId) => {
       try {
-        const response = await noteAPI.getNotes({ course_id: courseId })
+        const response = await noteAPI.getNotes({ course_id: Number(courseId), page_size: 10, sort_by: 'created_at', order: 'desc' })
         relatedNotes.value = response.notes || []
       } catch (error) {
         console.error('获取相关笔记失败:', error)
@@ -325,7 +321,7 @@ export default {
     // 获取推荐课程
     const fetchRecommendedCourses = async () => {
       try {
-        const response = await courseAPI.getCourses({ limit: 5 })
+        const response = await courseAPI.getCourses({ page_size: 5 })
         recommendedCourses.value = response.courses || []
       } catch (error) {
         console.error('获取推荐课程失败:', error)

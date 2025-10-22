@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"io"
-	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -12,68 +11,44 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	req "student_shared/app/model/req"
+	resp "student_shared/app/model/resp"
 )
 
-// UploadAvatarRequest 头像上传请求
-type UploadAvatarRequest struct {
-	File *multipart.FileHeader `form:"file" binding:"required"`
-}
-
-// UploadResponse 上传响应
-type UploadResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-	URL     string `json:"url,omitempty"`
-	Path    string `json:"path,omitempty"`
-}
 
 // UploadAvatar 上传头像
 func UploadAvatar(c *gin.Context) {
 	// 检查用户是否已登录
 	_, exists := c.Get("userID")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, UploadResponse{
-			Success: false,
-			Message: "未授权",
-		})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "未授权"})
 		return
 	}
 
-	// 获取上传的文件
-	file, err := c.FormFile("file")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, UploadResponse{
-			Success: false,
-			Message: "请选择要上传的文件",
-		})
+	// 绑定上传的文件
+	var form req.UploadAvatarRequest
+	if err := c.ShouldBind(&form); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请选择要上传的文件"})
 		return
 	}
+	file := form.File
 
 	// 验证文件类型
 	if !isValidImageType(file.Filename) {
-		c.JSON(http.StatusBadRequest, UploadResponse{
-			Success: false,
-			Message: "只支持 JPG、JPEG、PNG、GIF 格式的图片",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "只支持 JPG、JPEG、PNG、GIF 格式的图片"})
 		return
 	}
 
 	// 验证文件大小 (2MB)
 	if file.Size > 2*1024*1024 {
-		c.JSON(http.StatusBadRequest, UploadResponse{
-			Success: false,
-			Message: "文件大小不能超过 2MB",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "文件大小不能超过 2MB"})
 		return
 	}
 
 	// 创建上传目录
 	uploadDir := "uploads/avatars"
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		c.JSON(http.StatusInternalServerError, UploadResponse{
-			Success: false,
-			Message: "创建上传目录失败",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建上传目录失败"})
 		return
 	}
 
@@ -84,10 +59,7 @@ func UploadAvatar(c *gin.Context) {
 
 	// 保存文件
 	if err := c.SaveUploadedFile(file, filePath); err != nil {
-		c.JSON(http.StatusInternalServerError, UploadResponse{
-			Success: false,
-			Message: "保存文件失败",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "保存文件失败"})
 		return
 	}
 
@@ -95,11 +67,9 @@ func UploadAvatar(c *gin.Context) {
 	fileURL := fmt.Sprintf("/uploads/avatars/%s", filename)
 
 	// 返回成功响应
-	c.JSON(http.StatusOK, UploadResponse{
-		Success: true,
-		Message: "上传成功",
-		URL:     fileURL,
-		Path:    filePath,
+	c.JSON(http.StatusOK, resp.UploadResponse{
+		URL:  fileURL,
+		Size: file.Size,
 	})
 }
 

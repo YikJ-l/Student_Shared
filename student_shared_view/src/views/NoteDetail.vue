@@ -86,6 +86,30 @@
               </div>
             </el-card>
 
+            <el-card class="ai-summary-card">
+              <template #header>
+                <div class="ai-summary-header">
+                  <span>AI 智能摘要</span>
+                  <el-button
+                    v-if="canEditNote"
+                    size="small"
+                    type="primary"
+                    :loading="regenerating"
+                    @click="handleRegenerateSummary"
+                  >
+                    重新生成
+                  </el-button>
+                </div>
+              </template>
+              <div class="ai-summary-body">
+                <p v-if="aiMeta.summary" class="ai-summary-text">{{ aiMeta.summary }}</p>
+                <p v-else class="ai-summary-empty">暂无摘要</p>
+                <div class="ai-keywords" v-if="aiMeta.keywords && aiMeta.keywords.length">
+                  <el-tag v-for="kw in aiMeta.keywords" :key="kw" type="info" class="ai-keyword">{{ kw }}</el-tag>
+                </div>
+              </div>
+            </el-card>
+
             <!-- 评论区域 -->
             <div class="comments-section">
               <el-card class="comments-card">
@@ -348,6 +372,7 @@ import { ref, computed, onMounted, onActivated, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { noteAPI, commentAPI, roleUtils } from '../api'
+import { aiAPI } from '../api'
 import { 
   User, 
   Clock, 
@@ -394,6 +419,7 @@ export default {
     const replyContent = ref('')
     const replyLoading = ref(false)
     const currentUserId = ref(1) // 模拟当前用户ID
+    const regenerating = ref(false)
     
     // 角色权限检查
     const canEditNote = computed(() => {
@@ -445,6 +471,8 @@ export default {
         
         // 获取相关笔记
         await fetchRelatedNotes(noteId)
+        // 获取AI摘要与关键词
+        await fetchNoteAIMeta(noteId)
       } catch (error) {
         console.error('获取笔记详情失败:', error)
         // 强制刷新页面以确保获取最新数据，避免缓存问题
@@ -590,7 +618,7 @@ export default {
     // 获取作者其他笔记
     const fetchAuthorNotes = async (authorId) => {
       try {
-        const response = await noteAPI.getNotes({ user_id: authorId, limit: 5 })
+        const response = await noteAPI.getNotes({ user_id: authorId, page_size: 5 })
         // 根据API拦截器，response已经是处理后的数据
         authorNotes.value = response.notes || response || []
         console.log('作者笔记获取成功:', response)
@@ -605,7 +633,7 @@ export default {
     const fetchRelatedNotes = async (noteId) => {
       try {
         // 获取最新的公开笔记作为相关笔记
-        const response = await noteAPI.getNotes({ limit: 5, sort: 'created_at' })
+        const response = await noteAPI.getNotes({ page_size: 5, sort_by: 'created_at', order: 'desc' })
         // 根据API拦截器，response已经是处理后的数据
         const notes = response.notes || response || []
         // 过滤掉当前笔记
@@ -615,6 +643,45 @@ export default {
         console.error('获取相关笔记失败:', error)
         // 设置空数组作为默认值
         relatedNotes.value = []
+      }
+    }
+
+    // 获取AI元数据（摘要/关键词）
+    const aiMeta = ref({ summary: '', keywords: [] })
+    const fetchNoteAIMeta = async (noteId) => {
+      try {
+        const res = await aiAPI.getNoteMeta(noteId)
+        aiMeta.value = {
+          summary: res?.summary || '',
+          keywords: Array.isArray(res?.keywords) ? res.keywords : (res?.keywords ? String(res.keywords).split(',').filter(k => k.trim()) : [])
+        }
+      } catch (error) {
+        console.warn('获取AI元数据失败:', error)
+        aiMeta.value = { summary: '', keywords: [] }
+      }
+    }
+
+    // 重新生成摘要
+    const handleRegenerateSummary = async () => {
+      try {
+        // 权限校验：仅作者或管理员可用
+        if (!canEditNote.value) {
+          ElMessage.warning('您没有权限重新生成摘要')
+          return
+        }
+        regenerating.value = true
+        const noteId = route.params.id
+        // 调用后端生成摘要
+        await aiAPI.summarize({ note_id: Number(noteId) })
+        // 重新拉取AI元数据
+        await fetchNoteAIMeta(noteId)
+        ElMessage.success('摘要已重新生成')
+      } catch (error) {
+        console.error('重新生成摘要失败:', error)
+        const msg = error?.response?.data?.error || error?.message || '重新生成失败'
+        ElMessage.error(msg)
+      } finally {
+        regenerating.value = false
       }
     }
 
@@ -1164,7 +1231,8 @@ export default {
       handleLikeComment,
       handleReplyComment,
       handleReplyToReply,
-      fetchNoteDetail, // 暴露fetchNoteDetail方法用于调试
+      fetchNoteAIMeta,
+      aiMeta,
       handleCommentAction,
       cancelReply,
       submitReply,
@@ -1174,7 +1242,9 @@ export default {
       getWordCount,
       getReadingTime,
       formatTime,
-      formatDate
+      formatDate,
+      regenerating,
+      handleRegenerateSummary
     }
   }
 }
@@ -1708,6 +1778,32 @@ export default {
 .error-state {
   padding: 60px 0;
   text-align: center;
+}
+
+.ai-summary-card {
+  margin-bottom: 30px;
+}
+.ai-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ai-summary-text {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  color: var(--text-primary);
+}
+.ai-summary-empty {
+  color: var(--text-secondary);
+}
+.ai-keywords {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ai-keyword {
+  margin-right: 6px;
 }
 
 /* 响应式设计 */

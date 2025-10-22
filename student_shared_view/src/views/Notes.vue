@@ -217,7 +217,7 @@ export default {
       try {
         const params = {
           page: currentPage.value,
-          limit: pageSize.value,
+          page_size: pageSize.value,
           search: searchQuery.value
         }
         

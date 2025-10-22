@@ -218,7 +218,7 @@ export default {
         const response = await noteAPI.getPopularNotes()
         latestNotes.value = response.notes || []
         // 如果需要总数统计，可以单独调用获取总数的API
-        const allNotesResponse = await noteAPI.getNotes({ page: 1, limit: 1 })
+        const allNotesResponse = await noteAPI.getNotes({ page: 1, page_size: 1 })
         stats.value.notes = allNotesResponse.total || 0
       } catch (error) {
         console.error('获取热门笔记失败:', error)
@@ -398,64 +398,32 @@ export default {
 }
 
 .hero-icon {
-  font-size: 16rem;
-  opacity: 0.15;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
-  animation: float 6s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-20px);
-  }
+  font-size: 200px;
+  opacity: 0.2;
 }
 
 .features-section {
-  padding: 80px 0;
-  background-color: var(--bg-secondary);
+  padding: 60px 20px;
 }
 
 .section-title {
   text-align: center;
-  font-size: 2.5rem;
-  margin-bottom: 50px;
-  color: var(--text-primary);
+  font-size: 2rem;
+  margin-bottom: 30px;
 }
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 30px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
 }
 
 .feature-card .el-card {
-  text-align: center;
-  padding: 20px;
   height: 100%;
 }
 
-.feature-icon {
-  font-size: 3rem;
-  color: var(--primary-color);
-  margin-bottom: 20px;
-}
-
-.feature-card h3 {
-  font-size: 1.5rem;
-  margin-bottom: 15px;
-  color: var(--text-primary);
-}
-
-.feature-card p {
-  color: var(--text-secondary);
-  line-height: 1.6;
-}
-
 .latest-section {
-  padding: 80px 0;
+  padding: 60px 20px;
 }
 
 .latest-content {
@@ -464,140 +432,46 @@ export default {
   gap: 40px;
 }
 
-.latest-courses h3,
-.latest-notes h3 {
-  font-size: 1.8rem;
-  margin-bottom: 30px;
-  color: var(--text-primary);
-  text-align: center;
-}
-
 .course-item,
 .note-item {
-  margin-bottom: 20px;
-}
-
-.course-info h4,
-.note-info h4 {
-  font-size: 1.2rem;
-  margin-bottom: 8px;
-  color: var(--text-primary);
-}
-
-.course-teacher,
-.note-author {
-  color: var(--primary-color);
-  font-weight: 500;
-  margin-bottom: 8px;
-}
-
-.course-desc,
-.note-content {
-  color: var(--text-secondary);
-  margin-bottom: 15px;
-  line-height: 1.5;
+  margin-bottom: 16px;
 }
 
 .course-meta,
 .note-meta {
   display: flex;
-  justify-content: space-between;
+  gap: 8px;
   align-items: center;
 }
 
-.course-time,
-.note-time {
-  font-size: 0.9rem;
-  color: var(--text-light);
-}
-
 .view-more {
-  text-align: center;
-  margin-top: 20px;
+  text-align: right;
 }
 
 .stats-section {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  color: white;
-  padding: 60px 0;
+  padding: 60px 20px;
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 40px;
+  gap: 20px;
+}
+
+.stat-item {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
   text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .stat-number {
-  font-size: 3rem;
-  font-weight: 700;
-  margin-bottom: 10px;
+  font-size: 2rem;
+  font-weight: bold;
 }
 
 .stat-label {
-  font-size: 1.1rem;
-  opacity: 0.9;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .hero-section {
-    margin: 10px;
-    padding: 60px 16px;
-    min-height: 500px;
-    border-radius: 16px;
-  }
-
-  .hero-section .container {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .hero-content {
-    margin-bottom: 40px;
-    padding-right: 0;
-    max-width: 100%;
-  }
-
-  .hero-title {
-    font-size: 2.5rem;
-    margin-bottom: 20px;
-  }
-
-  .hero-subtitle {
-    font-size: 1.2rem;
-    margin-bottom: 32px;
-  }
-
-  .hero-actions {
-    justify-content: center;
-    gap: 16px;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .hero-actions .el-button {
-    padding: 14px 28px;
-    font-size: 1rem;
-    width: 200px;
-  }
-
-  .hero-icon {
-    font-size: 10rem;
-  }
-
-  .features-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .latest-content {
-    grid-template-columns: 1fr;
-    gap: 30px;
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  color: #666;
 }
 </style>

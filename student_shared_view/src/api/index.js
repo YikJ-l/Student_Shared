@@ -106,7 +106,7 @@ export const userAPI = {
   },
   // 获取用户信息
   getProfile() {
-    return api.get('/users/profile').then(response => {
+    return api.post('/users/profile').then(response => {
       // 更新本地用户信息
       if (response) {
         localStorage.setItem('userInfo', JSON.stringify(response))
@@ -118,35 +118,33 @@ export const userAPI = {
   updateProfile(userIdOrProfileData, profileData) {
     // 如果传入了两个参数且第一个是数字，说明是管理员更新其他用户的资料
     if (arguments.length === 2 && typeof userIdOrProfileData === 'number') {
-      return api.put(`/admin/users/${userIdOrProfileData}`, profileData).then(response => {
-        return response
-      })
+      return api.post('/admin/users/update', { id: Number(userIdOrProfileData), ...(profileData || {}) })
     }
     // 否则是用户更新自己的资料，第一个参数就是profileData
     const actualProfileData = arguments.length === 1 ? userIdOrProfileData : profileData
-    return api.put('/users/profile', actualProfileData).then(response => {
-      // 更新本地用户信息
+    return api.post('/users/profile/update', actualProfileData).then(response => {
+      // 更新本地用户信息（保存为用户对象，而不是整个响应）
       if (response) {
-        localStorage.setItem('userInfo', JSON.stringify(response))
+        localStorage.setItem('userInfo', JSON.stringify(response.user || response))
       }
       return response
     })
   },
   // 管理员获取所有用户
   getAllUsers(params = {}) {
-    return api.get('/admin/users', { params })
+    return api.post('/admin/users/list', params)
   },
   // 管理员更新用户角色
   updateUserRole(userId, roleData) {
-    return api.put(`/admin/users/${userId}/role`, roleData)
+    return api.post('/admin/users/update-role', { id: Number(userId), ...(roleData || {}) })
   },
   // 管理员删除用户
   deleteUser(userId) {
-    return api.delete(`/admin/users/${userId}`)
+    return api.post('/admin/users/delete', { id: Number(userId) })
   },
   // 获取管理员统计数据
   getAdminStats() {
-    return api.get('/admin/stats')
+    return api.post('/admin/stats')
   },
   // 上传头像
   uploadAvatar(file) {
@@ -160,7 +158,7 @@ export const userAPI = {
   },
   // 删除头像
   deleteAvatar(path) {
-    return api.delete('/upload/avatar', { data: { path } })
+    return api.post('/upload/avatar/delete', { path })
   },
   // 登出
   logout() {
@@ -174,40 +172,40 @@ export const userAPI = {
 export const courseAPI = {
   // 获取课程列表
   getCourses(params) {
-    return api.get('/courses', { params })
+    return api.post('/courses', params || {})
   },
   // 获取课程详情
   getCourseDetail(id) {
-    return api.get(`/courses/${id}`)
+    return api.post('/courses/detail', { id: Number(id) })
   },
   // 创建课程（仅教师和管理员）
   createCourse(data) {
     if (!roleUtils.hasManagePermission()) {
       return Promise.reject(new Error('权限不足：只有教师和管理员可以创建课程'))
     }
-    return api.post('/courses', data)
+    return api.post('/courses/create', data)
   },
   // 更新课程（仅教师和管理员）
   updateCourse(id, data) {
     if (!roleUtils.hasManagePermission()) {
       return Promise.reject(new Error('权限不足：只有教师和管理员可以更新课程'))
     }
-    return api.put(`/courses/${id}`, data)
+    return api.post('/courses/update', { id: Number(id), ...(data || {}) })
   },
-  // 删除课程（仅管理员）
+  // 删除课程（教师或管理员）
   deleteCourse(id) {
-    if (!roleUtils.isAdmin()) {
-      return Promise.reject(new Error('权限不足：只有管理员可以删除课程'))
+    if (!roleUtils.hasManagePermission()) {
+      return Promise.reject(new Error('权限不足：只有教师或管理员可以删除课程'))
     }
-    return api.delete(`/courses/${id}`)
+    return api.post('/courses/delete', { id: Number(id) })
   },
   // 加入课程
   joinCourse(id) {
-    return api.post(`/courses/${id}/join`)
+    return api.post('/courses/join', { id: Number(id) })
   },
 
   getMyCourses(params) {
-    return api.get('/courses/my', { params })
+    return api.post('/courses/my', params || {})
   },
   // 检查课程操作权限
   canCreateCourse() {
@@ -217,11 +215,11 @@ export const courseAPI = {
     return roleUtils.hasManagePermission()
   },
   canDeleteCourse() {
-    return roleUtils.isAdmin()
+    return roleUtils.hasManagePermission()
   },
   // 获取最新课程（首页用）
   getLatestCourses() {
-    return api.get('/home/latest-courses')
+    return api.post('/home/latest-courses')
   }
 }
 
@@ -229,30 +227,14 @@ export const courseAPI = {
 export const noteAPI = {
   // 获取笔记列表
   getNotes(params) {
-    return api.get('/notes', { params })
+    // 改为 POST，JSON 传筛选参数
+    return api.post('/notes', params || {})
   },
   // 获取笔记详情
   getNoteDetail(id, params = {}) {
-    // 添加强制缓存控制参数
-    const cacheControlParams = {
-      ...params,
-      t: Date.now(), // 时间戳
-      _: Math.random().toString(36).substr(2, 9), // 随机字符串
-      nocache: 'true' // 明确的无缓存标识
-    }
-    
-    // 添加强制缓存控制头部
-    const config = {
-      params: cacheControlParams,
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'If-Modified-Since': 'Mon, 26 Jul 1997 05:00:00 GMT'
-      }
-    }
-    
-    return api.get(`/notes/${id}`, config)
+    // 改为 POST，JSON 传 id；忽略缓存控制
+    const payload = { id: Number(id) }
+    return api.post('/notes/detail', payload)
   },
   // 创建笔记（需要登录）
   createNote(data) {
@@ -260,7 +242,7 @@ export const noteAPI = {
     if (!token) {
       return Promise.reject(new Error('请先登录'))
     }
-    return api.post('/notes', data)
+    return api.post('/notes/create', data)
   },
   // 更新笔记（仅作者或管理员）
   updateNote(id, data, noteAuthorId = null) {
@@ -277,7 +259,8 @@ export const noteAPI = {
         return Promise.reject(new Error('权限不足：只能编辑自己的笔记或管理员权限'))
       }
     }
-    return api.put(`/notes/${id}`, data)
+    // 改为 POST /notes/update，JSON 传 id + data
+    return api.post('/notes/update', { id: Number(id), ...data })
   },
   // 删除笔记（仅作者或管理员）
   deleteNote(id, noteAuthorId = null) {
@@ -294,39 +277,48 @@ export const noteAPI = {
         return Promise.reject(new Error('权限不足：只能删除自己的笔记或管理员权限'))
       }
     }
-    return api.delete(`/notes/${id}`)
+    // 改为 POST /notes/delete，JSON 传 id
+    return api.post('/notes/delete', { id: Number(id) })
   },
   // 点赞笔记
   likeNote(id) {
-    return api.post(`/notes/${id}/like`)
+    // 改为 POST /notes/like，JSON 传 id
+    return api.post('/notes/like', { id: Number(id) })
   },
   // 取消点赞
   unlikeNote(id) {
-    return api.delete(`/notes/${id}/like`)
+    // 改为 POST /notes/unlike，JSON 传 id
+    return api.post('/notes/unlike', { id: Number(id) })
   },
   // 收藏笔记
   favoriteNote(id) {
-    return api.post(`/notes/${id}/favorite`)
+    // 改为 POST /notes/favorite，JSON 传 id
+    return api.post('/notes/favorite', { id: Number(id) })
   },
   // 取消收藏
   unfavoriteNote(id) {
-    return api.delete(`/notes/${id}/favorite`)
+    // 改为 POST /notes/unfavorite，JSON 传 id
+    return api.post('/notes/unfavorite', { id: Number(id) })
   },
   // 获取我的收藏笔记
-  getMyFavorites() {
-    return api.get('/notes/favorites')
+  getMyFavorites(params = {}) {
+    // 改为 POST /notes/favorites，可选分页
+    return api.post('/notes/favorites', params)
   },
   // 获取我的点赞笔记
-  getMyLikes() {
-    return api.get('/notes/likes')
+  getMyLikes(params = {}) {
+    // 改为 POST /notes/likes，可选分页
+    return api.post('/notes/likes', params)
   },
   // 获取作者其他笔记
   getNotesByAuthor(authorId) {
-    return api.get(`/notes?author_id=${authorId}`)
+    // 复用 /notes POST 接口
+    return api.post('/notes', { user_id: Number(authorId), page_size: 5 })
   },
-  // 获取相关笔记
+  // 获取相关笔记（后端未提供专用接口，回退为列表）
   getRelatedNotes(id) {
-    return api.get(`/notes/${id}/related`)
+    // 取最新公开笔记作为相关笔记
+    return api.post('/notes', { page_size: 5, sort_by: 'created_at', order: 'desc' })
   },
   // 检查笔记操作权限
   canEditNote(noteAuthorId) {
@@ -343,7 +335,7 @@ export const noteAPI = {
   },
   // 获取热门笔记（首页用）
   getPopularNotes() {
-    return api.get('/home/popular-notes')
+    return api.post('/home/popular-notes')
   }
 }
 
@@ -351,7 +343,9 @@ export const noteAPI = {
 export const commentAPI = {
   // 获取评论列表
   getCommentsByNote(noteId, params) {
-    return api.get(`/comment/note/${noteId}`, { params })
+    // 改为 POST /comment/list，JSON 传 note_id 及分页
+    const payload = { note_id: Number(noteId), ...(params || {}) }
+    return api.post('/comment/list', payload)
   },
   // 创建评论（需要登录）
   createComment(data) {
@@ -359,7 +353,8 @@ export const commentAPI = {
     if (!token) {
       return Promise.reject(new Error('请先登录'))
     }
-    return api.post('/comment/', data)
+    // 改为 POST /comment/create
+    return api.post('/comment/create', data)
   },
   // 更新评论（仅作者或管理员）
   updateComment(id, data, commentAuthorId = null) {
@@ -376,7 +371,8 @@ export const commentAPI = {
         return Promise.reject(new Error('权限不足：只能编辑自己的评论或管理员权限'))
       }
     }
-    return api.put(`/comment/${id}`, data)
+    // 改为 POST /comment/update，JSON 传 id + data
+    return api.post('/comment/update', { id: Number(id), ...data })
   },
   // 删除评论（仅作者或管理员）
   deleteComment(id, commentAuthorId = null) {
@@ -393,7 +389,8 @@ export const commentAPI = {
         return Promise.reject(new Error('权限不足：只能删除自己的评论或管理员权限'))
       }
     }
-    return api.delete(`/comment/${id}`)
+    // 改为 POST /comment/delete，JSON 传 id
+    return api.post('/comment/delete', { id: Number(id) })
   },
   // 点赞评论
   likeComment(id) {
@@ -401,7 +398,8 @@ export const commentAPI = {
     if (!token) {
       return Promise.reject(new Error('请先登录'))
     }
-    return api.post(`/comment/${id}/like`)
+    // 改为 POST /comment/like，JSON 传 id
+    return api.post('/comment/like', { id: Number(id) })
   },
   // 取消点赞评论
   unlikeComment(id) {
@@ -409,7 +407,8 @@ export const commentAPI = {
     if (!token) {
       return Promise.reject(new Error('请先登录'))
     }
-    return api.delete(`/comment/${id}/like`)
+    // 改为 POST /comment/unlike，JSON 传 id
+    return api.post('/comment/unlike', { id: Number(id) })
   },
   // 检查评论操作权限
   canEditComment(commentAuthorId) {
@@ -428,9 +427,14 @@ export const commentAPI = {
 
 // 搜索相关API
 export const searchAPI = {
-  // 搜索
+  // 搜索（旧）
   search(params) {
-    return api.get('/search', { params })
+    // 兼容老调用，默认按笔记搜索
+    return api.post('/search/notes', params || {})
+  },
+  // 简单笔记搜索（关键词 LIKE）
+  searchNotes(params) {
+    return api.post('/search/notes', params || {})
   }
 }
 
@@ -438,15 +442,28 @@ export const searchAPI = {
 export const homeAPI = {
   // 获取热门笔记
   getPopularNotes() {
-    return api.get('/home/popular-notes')
+    return api.post('/home/popular-notes')
   },
   // 获取最新课程
   getLatestCourses() {
-    return api.get('/home/latest-courses')
+    return api.post('/home/latest-courses')
   },
   // 获取公开统计数据
   getPublicStats() {
-    return api.get('/home/stats')
+    return api.post('/home/stats')
+  }
+}
+
+// AI相关API
+export const aiAPI = {
+  // 获取笔记AI元数据（摘要/关键词）
+  getNoteMeta(id) {
+    // 改为 POST /ai/notes/meta，JSON 传 id
+    return api.post('/ai/notes/meta', { id: Number(id) })
+  },
+  // 生成摘要（需要登录；可传note_id或content）
+  summarize(payload = {}) {
+    return api.post('/ai/summarize', payload)
   }
 }
 

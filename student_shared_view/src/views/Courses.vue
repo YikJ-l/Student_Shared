@@ -88,8 +88,8 @@
                       {{ course.note_count || 0 }} 笔记
                     </span>
                     <span class="stat-item">
-                      <el-icon><View /></el-icon>
-                      {{ course.view_count || 0 }} 浏览
+                      <el-icon><User /></el-icon>
+                      {{ course.student_count || 0 }} 学习人数
                     </span>
                   </div>
                   <el-button type="primary" size="small">
@@ -156,7 +156,7 @@ export default {
       try {
         const params = {
           page: currentPage.value,
-          limit: pageSize.value,
+          page_size: pageSize.value,
           search: searchQuery.value
         }
         

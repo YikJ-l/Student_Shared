@@ -509,10 +509,6 @@ const courseRules = {
   department: [
     { required: true, message: '请输入所属院系', trigger: 'blur' },
     { min: 2, max: 100, message: '院系名称长度在 2 到 100 个字符', trigger: 'blur' }
-  ],
-  description: [
-    { required: true, message: '请输入课程描述', trigger: 'blur' },
-    { min: 10, max: 500, message: '课程描述长度在 10 到 500 个字符', trigger: 'blur' }
   ]
 }
 
@@ -744,7 +740,7 @@ const loadCourses = async () => {
   try {
     const response = await courseAPI.getCourses({
       page: courseCurrentPage.value,
-      limit: coursePageSize.value,
+      page_size: coursePageSize.value,
       search: courseSearch.value,
       status: courseStatusFilter.value || undefined
     })
@@ -933,7 +929,7 @@ const loadNotes = async () => {
   try {
     const response = await noteAPI.getNotes({
       page: noteCurrentPage.value,
-      limit: notePageSize.value,
+      page_size: notePageSize.value,
       search: noteSearch.value,
       status: noteStatusFilter.value || undefined
     })

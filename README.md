@@ -480,3 +480,63 @@ A: 系统采用软删除机制，删除课程时只是将状态设置为`inactiv
 ---
 
 **注意**：这是一个教育项目，仅供学习和研究使用。在生产环境中使用前，请确保进行充分的安全测试和性能优化。
+
+## AI 摘要集成
+# 高校课程互助与笔记分享平台
+
+## 后端配置（统一 conf 文件）
+
+- 配置文件路径：`app/conf/congfig.conf`
+- 格式：`KEY=VALUE`（无分区），支持注释行（以 `#` 或 `;` 开头）。
+- 环境变量覆盖：若存在同名环境变量，优先使用环境变量值。
+
+示例内容：
+
+```
+# 数据库配置
+MYSQL_USER=root
+MYSQL_PASS=abc123456
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DB=shared_student
+
+# 服务端口
+SERVER_PORT=8080
+
+# AI配置
+OPENAI_API_KEY= # 在此填入真实密钥或通过环境变量注入
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_TIMEOUT_SECONDS=30
+```
+
+## 生效范围
+
+- 数据库：`app/utils/database/database.go` 读取上述 MySQL 配置。
+- 服务端口：`app/app.go` 读取 `SERVER_PORT`。
+- AI 摘要：`app/utils/ai/provider_openai.go` 读取 `OPENAI_*` 配置（密钥为空时不调用真实AI，自动降级到本地算法）。
+
+## 使用说明
+
+- 开发环境可直接编辑 `congfig.conf`；生产环境建议使用环境变量覆盖敏感项（如 `OPENAI_API_KEY`）。
+- 修改后无需重启即可被读取（当前实现为进程启动时加载一次，如需热更新可后续扩展）。
+
+## 前端说明（摘要再生成）
+
+- 笔记详情页新增“重新生成”按钮（作者/管理员可见），触发后端 `POST /api/v1/ai/summarize`，成功后刷新 `GET /api/v1/ai/notes/:id/meta`。具体见 `student_shared_view/src/views/NoteDetail.vue`。
+- 搜索说明：`GET /api/v1/notes/search?keyword=xxx` 已支持在 AI 关键词（NoteAIMeta.keywords）中匹配，提升相关性。
+
+## 语义检索（Semantic Search）
+
+- 端点：`GET /api/v1/search/semantic`
+- 查询参数：
+  - `q`：搜索关键词（必填）
+  - `type`：`notes` | `courses` | `all`（默认 `all`）
+  - `page`：页码（默认 `1`）
+  - `page_size`：每页数量（默认 `10`，最大 `100`）
+- 响应字段：
+  - 通用：`page`, `page_size`
+  - 笔记：`notes`（数组），每项包含：`id`, `title`, `excerpt`, `similarity`, `highlighted_title`, `highlighted_excerpt`, `user_id`, `course_id`, `course_name`, `status`, `created_at`；以及 `total_notes`
+  - 课程：`courses`（数组），每项包含：`id`, `name`, `description_excerpt`, `similarity`, `highlighted_name`, `highlighted_description`, `school`, `department`, `semester`, `teacher`, `created_at`；以及 `total_courses`
+- 排序与高亮：后端按语义相似度自动排序，并返回 HTML 高亮字段（`highlighted_*`），前端直接用 `v-html` 渲染即可。
+- 过滤支持：目前支持按类型（笔记/课程）与常规关键词预筛选，后续可扩展课程维度（学校/院系/学期）与笔记维度（作者/课程/状态）参数。

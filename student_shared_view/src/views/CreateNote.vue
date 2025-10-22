@@ -344,10 +344,6 @@ export default {
       title: [
         { required: true, message: '请输入笔记标题', trigger: 'blur' },
         { min: 5, max: 100, message: '标题长度在 5 到 100 个字符', trigger: 'blur' }
-      ],
-      content: [
-        { required: true, message: '请输入笔记内容', trigger: 'blur' },
-        { min: 50, message: '内容至少需要 50 个字符', trigger: 'blur' }
       ]
     }
     
@@ -478,8 +474,9 @@ export default {
     const fetchCourses = async () => {
       try {
         coursesLoading.value = true
-        const response = await courseAPI.getCourses()
-        courses.value = response.courses || response || []
+        // 仅获取当前用户已加入的课程
+        const response = await courseAPI.getMyCourses({ page_size: 100 })
+        courses.value = response.data || []
       } catch (error) {
         console.error('获取课程列表失败:', error)
         ElMessage.error('获取课程列表失败')

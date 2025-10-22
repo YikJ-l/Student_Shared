@@ -5,6 +5,7 @@ import (
 	"log"
 	"student_shared/app/middleware"
 	"student_shared/app/router"
+	"student_shared/app/utils/config"
 	"student_shared/app/utils/database"
 
 	"github.com/gin-gonic/gin"
@@ -28,8 +29,12 @@ func Start() {
 	// 注册路由
 	router.RegisterRoutes(r)
 
-	// 启动服务器
-	port := "8080"
+	// 读取统一配置中的服务端口
+	c := config.Load()
+	port := c.Server.Port
+	if port == "" {
+		port = "8080"
+	}
 	fmt.Printf("服务器启动在 http://localhost:%s\n", port)
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("服务器启动失败: %v", err)

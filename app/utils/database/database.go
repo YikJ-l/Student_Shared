@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"student_shared/app/model"
+	"student_shared/app/utils/config"
 	"time"
 
 	"gorm.io/driver/mysql"
@@ -17,12 +18,13 @@ var DB *gorm.DB
 
 // InitDB 初始化数据库连接
 func InitDB() error {
-	// 数据库配置
-	dbUser := "root"           // 数据库用户名
-	dbPass := "abc123456"      // 数据库密码
-	dbHost := "localhost"      // 数据库主机
-	dbPort := "3306"           // 数据库端口
-	dbName := "shared_student" // 数据库名称
+	// 从统一配置加载数据库参数
+	c := config.Load()
+	dbUser := c.DB.User
+	dbPass := c.DB.Pass
+	dbHost := c.DB.Host
+	dbPort := c.DB.Port
+	dbName := c.DB.Name
 
 	// 构建DSN连接字符串
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
@@ -80,6 +82,9 @@ func autoMigrate() error {
 		&model.Favorite{},
 		&model.NoteLike{},
 		&model.CommentLike{},
+		&model.NoteAIMeta{},
+		&model.NoteEmbedding{},
+		&model.CourseEmbedding{},
 	)
 	return err
 }

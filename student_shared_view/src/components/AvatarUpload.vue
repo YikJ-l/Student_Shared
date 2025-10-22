@@ -194,6 +194,7 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import api from '@/api'
 
 export default {
   name: 'AvatarUpload',
@@ -250,15 +251,19 @@ export default {
       'http://localhost:8081/img/avatars/avatar6.svg'
     ]
     
-    // 上传配置
+    // 从全局API实例获取服务端origin
+    const apiBase = new URL(api.defaults.baseURL)
+    const serverOrigin = `${apiBase.protocol}//${apiBase.host}`
+
+    // 上传配置（统一使用全局API baseURL）
     const uploadUrl = computed(() => {
-      return 'http://localhost:8080/api/v1/upload/avatar'
+      return `${api.defaults.baseURL}/upload/avatar`
     })
     
     const uploadHeaders = computed(() => {
       const token = localStorage.getItem('token')
       return {
-        'token': token
+        token
       }
     })
     
@@ -327,16 +332,16 @@ export default {
       uploadProgress.value = Math.round(event.percent)
     }
     
-    // 上传成功
+    // 上传成功（后端返回 { url: '/uploads/avatars/xxx', size: n }）
     const handleUploadSuccess = (response) => {
       uploading.value = false
       uploadProgress.value = 0
       
-      if (response.success && response.url) {
-        previewUrl.value = `http://localhost:8080${response.url}`
+      if (response && response.url) {
+        previewUrl.value = `${serverOrigin}${response.url}`
         ElMessage.success('上传成功')
       } else {
-        ElMessage.error(response.message || '上传失败')
+        ElMessage.error('上传失败')
       }
     }
     

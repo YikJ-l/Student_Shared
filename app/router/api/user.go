@@ -3,65 +3,45 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"time"
+
 	"student_shared/app/model"
 	"student_shared/app/utils/database"
 	"student_shared/app/utils/jwt"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
+
+	req "student_shared/app/model/req"
+	resp "student_shared/app/model/resp"
 )
-
-// UserRegisterRequest 用户注册请求
-type UserRegisterRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=50"`
-	Password string `json:"password" binding:"required,min=6"`
-	Email    string `json:"email" binding:"required,email"`
-	Nickname string `json:"nickname"`
-	School   string `json:"school"`
-}
-
-// UserLoginRequest 用户登录请求
-type UserLoginRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
-}
-
-// UserProfileResponse 用户资料响应
-type UserProfileResponse struct {
-	ID           uint      `json:"id"`
-	Username     string    `json:"username"`
-	Email        string    `json:"email"`
-	Nickname     string    `json:"nickname"`
-	Avatar       string    `json:"avatar"`
-	School       string    `json:"school"`
-	Department   string    `json:"department"`
-	Major        string    `json:"major"`
-	Introduction string    `json:"introduction"`
-	Role         string    `json:"role"`
-	LastLogin    time.Time `json:"last_login"`
-	CreatedAt    time.Time `json:"created_at"`
-}
 
 // RegisterUser 用户注册
 func RegisterUser(c *gin.Context) {
-	var req UserRegisterRequest
+	var req req.UserRegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数无效"})
 		return
 	}
 
 	// 检查用户名是否已存在
-	var existingUser model.User
-	result := database.DB.Where("username = ?", req.Username).First(&existingUser)
-	if result.RowsAffected > 0 {
+	existsUsername, err := model.UserExistsByUsername(database.DB, req.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "检查用户名失败"})
+		return
+	}
+	if existsUsername {
 		c.JSON(http.StatusConflict, gin.H{"error": "用户名已存在"})
 		return
 	}
 
 	// 检查邮箱是否已存在
-	result = database.DB.Where("email = ?", req.Email).First(&existingUser)
-	if result.RowsAffected > 0 {
+	existsEmail, err := model.UserExistsByEmail(database.DB, req.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "检查邮箱失败"})
+		return
+	}
+	if existsEmail {
 		c.JSON(http.StatusConflict, gin.H{"error": "邮箱已被注册"})
 		return
 	}
@@ -84,8 +64,7 @@ func RegisterUser(c *gin.Context) {
 		Role:      "student",
 	}
 
-	result = database.DB.Create(&user)
-	if result.Error != nil {
+	if err := model.CreateUser(database.DB, &user); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建用户失败"})
 		return
 	}
@@ -100,7 +79,7 @@ func RegisterUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "注册成功",
 		"token":   token,
-		"user": UserProfileResponse{
+		"user": resp.UserProfileResponse{
 			ID:        user.ID,
 			Username:  user.Username,
 			Email:     user.Email,
@@ -114,30 +93,32 @@ func RegisterUser(c *gin.Context) {
 
 // LoginUser 用户登录
 func LoginUser(c *gin.Context) {
-	var req UserLoginRequest
+	var req req.UserLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数无效"})
 		return
 	}
 
 	// 查找用户
-	var user model.User
-	result := database.DB.Where("username = ?", req.Username).First(&user)
-	if result.RowsAffected == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误"})
-		return
-	}
-
-	// 验证密码
-	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
+	user, err := model.GetUserByUsername(database.DB, req.Username)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误"})
 		return
 	}
 
+	// 验证密码
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误"})
+		return
+	}
+
 	// 更新最后登录时间
-	user.LastLogin = time.Now()
-	database.DB.Save(&user)
+	loginTime := time.Now()
+	if err := model.UpdateLastLogin(database.DB, user.ID, loginTime); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新登录时间失败"})
+		return
+	}
+	user.LastLogin = loginTime
 
 	// 生成JWT令牌
 	token, err := jwt.GenerateToken(user.ID, user.Username, user.Role)
@@ -149,7 +130,7 @@ func LoginUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "登录成功",
 		"token":   token,
-		"user": UserProfileResponse{
+		"user": resp.UserProfileResponse{
 			ID:           user.ID,
 			Username:     user.Username,
 			Email:        user.Email,
@@ -177,14 +158,13 @@ func GetUserProfile(c *gin.Context) {
 	}
 
 	// 查询用户信息
-	var user model.User
-	result := database.DB.First(&user, userID)
-	if result.Error != nil {
+	user, err := model.GetUserByID(database.DB, userID.(uint))
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
 		return
 	}
 
-	c.JSON(http.StatusOK, UserProfileResponse{
+	c.JSON(http.StatusOK, resp.UserProfileResponse{
 		ID:           user.ID,
 		Username:     user.Username,
 		Email:        user.Email,
@@ -210,9 +190,8 @@ func UpdateUserProfile(c *gin.Context) {
 	}
 
 	// 查询用户信息
-	var user model.User
-	result := database.DB.First(&user, userID)
-	if result.Error != nil {
+	user, err := model.GetUserByID(database.DB, userID.(uint))
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
 		return
 	}
@@ -232,47 +211,35 @@ func UpdateUserProfile(c *gin.Context) {
 		return
 	}
 
-	// 更新用户信息 - 使用指针判断字段是否被提供
-	if updateData.Nickname != nil {
-		user.Nickname = *updateData.Nickname
-	}
-	if updateData.Avatar != nil {
-		user.Avatar = *updateData.Avatar
-	}
-	if updateData.School != nil {
-		user.School = *updateData.School
-	}
-	if updateData.Department != nil {
-		user.Department = *updateData.Department
-	}
-	if updateData.Major != nil {
-		user.Major = *updateData.Major
-	}
-	if updateData.Introduction != nil {
-		user.Introduction = *updateData.Introduction
-	}
+	updates := map[string]interface{}{}
+	if updateData.Nickname != nil { updates["nickname"] = *updateData.Nickname }
+	if updateData.Avatar != nil { updates["avatar"] = *updateData.Avatar }
+	if updateData.School != nil { updates["school"] = *updateData.School }
+	if updateData.Department != nil { updates["department"] = *updateData.Department }
+	if updateData.Major != nil { updates["major"] = *updateData.Major }
+	if updateData.Introduction != nil { updates["introduction"] = *updateData.Introduction }
 
-	result = database.DB.Save(&user)
-	if result.Error != nil {
+	updated, err := model.UpdateUserFields(database.DB, user.ID, updates)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新用户信息失败"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "更新成功",
-		"user": UserProfileResponse{
-			ID:           user.ID,
-			Username:     user.Username,
-			Email:        user.Email,
-			Nickname:     user.Nickname,
-			Avatar:       user.Avatar,
-			School:       user.School,
-			Department:   user.Department,
-			Major:        user.Major,
-			Introduction: user.Introduction,
-			Role:         user.Role,
-			LastLogin:    user.LastLogin,
-			CreatedAt:    user.CreatedAt,
+		"message": "用户信息更新成功",
+		"user": resp.UserProfileResponse{
+			ID:           updated.ID,
+			Username:     updated.Username,
+			Email:        updated.Email,
+			Nickname:     updated.Nickname,
+			Avatar:       updated.Avatar,
+			School:       updated.School,
+			Department:   updated.Department,
+			Major:        updated.Major,
+			Introduction: updated.Introduction,
+			Role:         updated.Role,
+			LastLogin:    updated.LastLogin,
+			CreatedAt:    updated.CreatedAt,
 		},
 	})
 }

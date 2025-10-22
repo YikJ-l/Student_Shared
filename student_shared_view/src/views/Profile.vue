@@ -871,7 +871,7 @@ export default {
           page_size: coursesPageSize.value
         })
         
-        myCourses.value = response.courses || []
+        myCourses.value = response.data || []
         coursesTotal.value = response.total || 0
       } catch (error) {
         console.error('加载我的课程失败:', error)
