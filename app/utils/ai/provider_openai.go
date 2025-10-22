@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"student_shared/app/utils/config"
+	config "student_shared/app/conf"
 )
 
 // openAIConfig holds runtime configuration for OpenAI provider.

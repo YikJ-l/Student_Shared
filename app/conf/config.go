@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"sync"
 )
 
@@ -33,10 +32,9 @@ type Config struct {
 }
 
 var (
-	cfg     Config
-	loaded  bool
-	mu      sync.RWMutex
-	cfgPath = filepath.Join("app", "conf", "congfig.conf")
+	cfg    Config
+	loaded bool
+	mu     sync.RWMutex
 )
 
 // Load 读取配置文件（幂等）。
@@ -47,7 +45,7 @@ func Load() Config {
 		return cfg
 	}
 
-	if fc, err := os.ReadFile(cfgPath); err == nil {
+	if fc, err := os.ReadFile("app/conf/config.conf"); err == nil {
 		_ = json.Unmarshal(fc, &cfg)
 	}
 

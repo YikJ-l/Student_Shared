@@ -5,7 +5,7 @@ import (
 	"log"
 	"student_shared/app/middleware"
 	"student_shared/app/router"
-	"student_shared/app/utils/config"
+	config "student_shared/app/conf"
 	"student_shared/app/utils/database"
 
 	"github.com/gin-gonic/gin"

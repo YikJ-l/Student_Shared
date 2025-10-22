@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 	"student_shared/app/model"
-	"student_shared/app/utils/config"
+	config "student_shared/app/conf"
 	"time"
 
 	"gorm.io/driver/mysql"
