@@ -39,16 +39,13 @@ type openAIEmbeddingConfig struct {
 func getOpenAIEmbeddingConfig() openAIEmbeddingConfig {
 	c := config.Load()
 	model := c.AI.Model
-	if model == "" {
-		model = "text-embedding-3-small"
-	}
 	return openAIEmbeddingConfig{
 		APIKey: c.AI.APIKey,
 		BaseURL: func() string {
 			if c.AI.BaseURL != "" {
 				return c.AI.BaseURL
 			}
-			return "https://api.openai.com/v1"
+			return ""
 		}(),
 		Model:   model,
 		Timeout: time.Duration(c.AI.TimeoutS) * time.Second,
