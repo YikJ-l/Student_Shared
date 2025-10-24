@@ -164,91 +164,11 @@ export default {
         courses.value = response.courses || []
         total.value = response.total || 0
       } catch (error) {
-        // 使用模拟数据
-        const mockCourses = [
-          {
-            id: 1,
-            name: '高等数学A',
-            teacher: '张教授',
-            description: '微积分基础理论与应用，包括极限、导数、积分等核心概念',
-            category: '数学',
-            note_count: 25,
-            view_count: 1200,
-            created_at: '2024-01-15T10:00:00Z'
-          },
-          {
-            id: 2,
-            name: '数据结构与算法',
-            teacher: '李教授',
-            description: '计算机科学基础课程，涵盖线性表、树、图等数据结构',
-            category: '计算机',
-            note_count: 42,
-            view_count: 2100,
-            created_at: '2024-01-20T14:30:00Z'
-          },
-          {
-            id: 3,
-            name: '大学英语',
-            teacher: '王教授',
-            description: '英语听说读写综合训练，提高英语应用能力',
-            category: '语言',
-            note_count: 18,
-            view_count: 800,
-            created_at: '2024-01-25T09:15:00Z'
-          },
-          {
-            id: 4,
-            name: '线性代数',
-            teacher: '赵教授',
-            description: '矩阵理论、向量空间、线性变换等数学基础',
-            category: '数学',
-            note_count: 31,
-            view_count: 1500,
-            created_at: '2024-02-01T11:20:00Z'
-          },
-          {
-            id: 5,
-            name: '操作系统',
-            teacher: '陈教授',
-            description: '计算机操作系统原理，进程管理、内存管理、文件系统',
-            category: '计算机',
-            note_count: 28,
-            view_count: 1800,
-            created_at: '2024-02-05T16:45:00Z'
-          },
-          {
-            id: 6,
-            name: '微观经济学',
-            teacher: '刘教授',
-            description: '市场经济基本原理，供需关系、价格机制、市场结构',
-            category: '经济',
-            note_count: 22,
-            view_count: 950,
-            created_at: '2024-02-10T13:30:00Z'
-          }
-        ]
         
-        // 简单的筛选和搜索逻辑
-        let filteredCourses = mockCourses
         
-
-        
-        if (searchQuery.value) {
-          const query = searchQuery.value.toLowerCase()
-          filteredCourses = filteredCourses.filter(course => 
-            course.name.toLowerCase().includes(query) ||
-            course.teacher.toLowerCase().includes(query) ||
-            course.description.toLowerCase().includes(query)
-          )
-        }
-        
-        // 分页处理
-        const startIndex = (currentPage.value - 1) * pageSize.value
-        const endIndex = startIndex + pageSize.value
-        const paginatedCourses = filteredCourses.slice(startIndex, endIndex)
-        
-        courses.value = paginatedCourses
-        total.value = filteredCourses.length
+        // 去除未定义的 mockCourses 依赖，改为安全的空数据回退
+        courses.value = []
+        total.value = 0
       } finally {
         loading.value = false
       }

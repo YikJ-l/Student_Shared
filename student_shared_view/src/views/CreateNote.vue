@@ -459,7 +459,7 @@ export default {
         ElMessage.success('笔记发布成功！')
         
         // 跳转到笔记详情页
-        router.push(`/note/${response.id}`)
+        router.push(`/notes/${response.id}`)
       } catch (error) {
         if (error !== 'cancel') {
           console.error('发布失败:', error)

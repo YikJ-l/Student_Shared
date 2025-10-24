@@ -24,6 +24,15 @@
             />
           </el-form-item>
           
+          <el-form-item prop="nickname">
+            <el-input
+              v-model="registerForm.nickname"
+              placeholder="请输入昵称（用于展示）"
+              size="large"
+              prefix-icon="UserFilled"
+            />
+          </el-form-item>
+          
           <el-form-item prop="email">
             <el-input
               v-model="registerForm.email"
@@ -156,6 +165,7 @@ export default {
     
     const registerForm = reactive({
       username: '',
+      nickname: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -186,6 +196,10 @@ export default {
         { required: true, message: '请输入用户名', trigger: 'blur' },
         { min: 3, max: 20, message: '用户名长度在 3 到 20 个字符', trigger: 'blur' },
         { pattern: /^[a-zA-Z0-9_\u4e00-\u9fa5]+$/, message: '用户名只能包含字母、数字、下划线和中文', trigger: 'blur' }
+      ],
+      nickname: [
+        { required: true, message: '请输入昵称', trigger: 'blur' },
+        { min: 2, max: 20, message: '昵称长度在 2 到 20 个字符', trigger: 'blur' }
       ],
       email: [
         { required: true, message: '请输入邮箱地址', trigger: 'blur' },

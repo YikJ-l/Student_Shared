@@ -49,4 +49,7 @@ const getRoleTagType = () => {
   display: flex;
   align-items: center;
 }
+.role-badge .el-tag {
+  white-space: nowrap;
+}
 </style>

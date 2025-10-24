@@ -32,7 +32,7 @@
               </div>
               
               <div class="user-basic-info">
-                <h3 class="username">{{ userInfo.username }}</h3>
+                <h3 class="username">{{ userInfo.nickname || userInfo.username }}</h3>
                 <p class="user-email">{{ userInfo.email }}</p>
                 <p class="join-date">加入时间：{{ formatDate(userInfo.created_at) }}</p>
               </div>
@@ -606,6 +606,8 @@ export default {
           Object.assign(userInfo.value, response.user)
           // 同时更新localStorage中的用户信息
           localStorage.setItem('userInfo', JSON.stringify(response.user))
++         // 通知其他组件（如头部）刷新用户信息显示
++         window.dispatchEvent(new Event('user-info-updated'))
           ElMessage.success('个人信息更新成功')
         } else {
           ElMessage.error(response.message || '更新失败')

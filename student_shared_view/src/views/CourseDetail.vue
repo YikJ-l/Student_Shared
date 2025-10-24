@@ -244,65 +244,6 @@ export default {
         await fetchRecommendedCourses()
       } catch (error) {
         console.error('获取课程详情失败:', error)
-        // 使用模拟数据
-        const courseId = parseInt(route.params.id)
-        course.value = {
-          id: courseId,
-          name: '高等数学A',
-          teacher: '张教授',
-          description: '微积分基础理论与应用，包括极限、导数、积分等核心概念。本课程旨在培养学生的数学思维能力和解决实际问题的能力。',
-          category: '数学',
-          content: '<h3>课程目标</h3><p>通过本课程的学习，学生将掌握微积分的基本理论和方法，能够运用微积分知识解决实际问题。</p><h3>主要内容</h3><ul><li>函数与极限</li><li>导数与微分</li><li>积分学</li><li>微分方程</li></ul>',
-          note_count: 25,
-          view_count: 1200,
-          student_count: 89,
-          created_at: '2024-01-15T10:00:00Z',
-          updated_at: '2024-02-20T15:30:00Z'
-        }
-        
-        // 模拟相关笔记
-        relatedNotes.value = [
-          {
-            id: 1,
-            title: '微积分重点知识总结',
-            content: '本笔记总结了微积分的重点知识点，包括导数、积分的基本概念和计算方法...',
-            author: '小明',
-            view_count: 245,
-            comment_count: 12,
-            like_count: 38,
-
-            created_at: '2024-02-15T10:30:00Z'
-          },
-          {
-            id: 2,
-            title: '极限计算技巧分享',
-            content: '分享一些极限计算的常用技巧和方法，帮助大家更好地理解和掌握极限概念...',
-            author: '小红',
-            view_count: 189,
-            comment_count: 8,
-            like_count: 25,
-
-            created_at: '2024-02-10T14:20:00Z'
-          }
-        ]
-        
-        // 模拟推荐课程
-        recommendedCourses.value = [
-          {
-            id: 2,
-            name: '线性代数',
-            teacher: '李教授',
-            note_count: 18,
-            view_count: 890
-          },
-          {
-            id: 3,
-            name: '概率论与数理统计',
-            teacher: '王教授',
-            note_count: 22,
-            view_count: 756
-          }
-        ]
       } finally {
         loading.value = false
       }

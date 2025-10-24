@@ -14,7 +14,7 @@
               @keyup.enter="handleSearch"
             >
               <template #prefix>
-                <el-icon><Search /></el-icon>
+                <el-icon><SearchIcon /></el-icon>
               </template>
               <template #append>
                 <el-button type="primary" @click="handleSearch" :loading="searching">
@@ -291,19 +291,14 @@ import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { searchAPI } from '../api'
-import {
-  Search,
-  View,
-  ChatDotRound,
-  Star,
-  User,
-  Document
-} from '@element-plus/icons-vue'
+// 将图标 Search 重命名为 SearchIcon，避免与组件名冲突导致递归
+import { Search as SearchIcon, View, ChatDotRound, Star, User, Document } from '@element-plus/icons-vue'
 
 export default {
-  name: 'Search',
+  // 避免与图标名冲突，组件名改为 SearchPage
+  name: 'SearchPage',
   components: {
-    Search,
+    SearchIcon,
     View,
     ChatDotRound,
     Star,
@@ -386,26 +381,39 @@ export default {
       searching.value = true
       const startTime = Date.now()
       try {
-        // 简单笔记搜索：统一按笔记查询
+        // 统一按笔记查询（优先语义检索，失败回退到关键词检索）
         const typeParam = 'notes'
-        // 排序映射到后端可识别字段
+        // 排序映射到后端可识别字段（关键词检索专用）
         const sortMap = { relevance: 'created_at', time: 'created_at', popularity: 'like_count' }
         const sortByParam = sortMap[filters.sortBy] || 'created_at'
         
-        const params = {
+        const paramsKeyword = {
           keyword: searchQuery.value,
           page: currentPage.value,
           page_size: pageSize.value,
           sort_by: sortByParam,
           order: 'desc'
         }
+        // 语义检索参数（TopK 设为当前页大小）
+        const paramsSemantic = {
+          keyword: searchQuery.value,
+          page: currentPage.value,
+          page_size: pageSize.value,
+          top_k: pageSize.value
+        }
 
-        const response = await searchAPI.searchNotes(params)
+        let response
+        try {
+          response = await searchAPI.searchNotesSemantic(paramsSemantic)
+        } catch (semanticErr) {
+          // 回退到简单关键词检索
+          response = await searchAPI.searchNotes(paramsKeyword)
+        }
         const notes = Array.isArray(response?.notes) ? response.notes : []
-        // 兼容当前展示结构：补充 excerpt 字段
+        // 兼容当前展示结构：优先使用后端提供的 excerpt 字段
         results.notes = notes.map(n => ({
           ...n,
-          excerpt: n.description || ''
+          excerpt: n.excerpt || n.description || ''
         }))
         results.courses = []
         results.users = []
@@ -562,7 +570,7 @@ export default {
 }
 
 .search-input-container {
-  max-width: 600px;
+  max-width: 700px;
   margin: 0 auto 20px;
 }
 

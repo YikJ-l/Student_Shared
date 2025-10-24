@@ -1,91 +1,129 @@
 <template>
-  <div id="app" >
-    <el-container>
-      <!-- 顶部导航栏 -->
-      <el-header class="app-header" style="height: 64px;">
-        <div class="header-content">
-          <div class="logo">
-            <el-icon class="logo-icon"><School /></el-icon>
-            <span class="logo-text">高校课程互助与笔记分享平台</span>
+  <div id="app">
+    <el-container class="layout-root">
+      <!-- 侧边导航栏 -->
+      <el-aside v-if="!$route.meta.hideSidebar" :width="isCollapsed ? '64px' : '220px'" class="app-aside" :class="{ 'is-collapsed': isCollapsed, 'is-animating': isAnimating }">
+        <div class="aside-logo"></div>
+        <el-menu
+          mode="vertical"
+          :default-active="$route.path"
+          class="side-nav-menu"
+          router
+          unique-opened
+          :collapse="isCollapsed"
+          :collapse-transition="false"
+        >
+          <el-menu-item index="/">
+            <el-icon><House /></el-icon>
+            <span>首页</span>
+          </el-menu-item>
+          <el-menu-item index="/courses">
+            <el-icon><Reading /></el-icon>
+            <span>课程</span>
+          </el-menu-item>
+          <el-menu-item index="/notes">
+            <el-icon><Document /></el-icon>
+            <span>笔记</span>
+          </el-menu-item>
+          <el-menu-item index="/search">
+            <el-icon><SearchIcon /></el-icon>
+            <span>搜索</span>
+          </el-menu-item>
+          <el-menu-item v-if="isLoggedIn" index="/profile">
+            <el-icon><User /></el-icon>
+            <span>个人中心</span>
+          </el-menu-item>
+          <el-menu-item v-if="isAdmin" index="/admin">
+            <el-icon><Setting /></el-icon>
+            <span>管理员控制台</span>
+          </el-menu-item>
+          <el-menu-item v-if="isTeacher" index="/teacher">
+            <el-icon><School /></el-icon>
+            <span>教师工作台</span>
+          </el-menu-item>
+        </el-menu>
+      </el-aside>
+
+      <!-- 右侧主内容区域 -->
+      <el-container>
+        <!-- 顶部仅保留用户操作，不再显示菜单 -->
+        <el-header class="app-header" style="height: 64px;">
+          <div class="header-content">
+            <div class="left-tools">
+        <el-button text class="collapse-toggle" @click="toggleAside">
+          <el-icon v-if="isCollapsed"><Expand /></el-icon>
+          <el-icon v-else><Fold /></el-icon>
+        </el-button>
+      </div>
+      <div class="logo" @click="$router.push('/')">
+        <el-icon class="logo-icon"><School /></el-icon>
+        <span class="logo-text">高校课程互助与笔记分享平台</span>
+      </div>
+      <div class="spacer"></div>
+      <div class="user-actions">
+              <template v-if="isLoggedIn">
+                <RoleNavigation class="role-nav" />
+                
+                <el-dropdown @command="handleCommand">
+                  <span class="user-info">
+                    <el-icon><User /></el-icon>
+                    {{ userInfo.nickname || userInfo.username || '用户' }}
+                    <el-icon class="el-icon--right"><arrow-down /></el-icon>
+                  </span>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+                      <!-- <el-dropdown-item command="create-note">发布笔记</el-dropdown-item> -->
+                      <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+                
+                <el-button 
+                  v-if="isAdmin"
+                  type="primary" 
+                  @click="goToAdmin"
+                  :class="{ 'admin-active': $route.path === '/admin' }"
+                  class="admin-console-btn"
+                >
+                  <el-icon><Setting /></el-icon>
+                  管理员控制台
+                </el-button>
+                <el-button 
+                  v-if="isTeacher"
+                  type="warning" 
+                  @click="goToTeacher"
+                  :class="{ 'teacher-active': $route.path === '/teacher' }"
+                  class="teacher-console-btn"
+                >
+                  <el-icon><School /></el-icon>
+                  教师工作台
+                </el-button>
+              </template>
+              <template v-else>
+                <el-button link @click="$router.push('/login')">登录</el-button>
+                <el-button type="primary" @click="$router.push('/register')">注册</el-button>
+              </template>
+            </div>
           </div>
-          
-          <el-menu
-            mode="horizontal"
-            :default-active="$route.path"
-            class="nav-menu"
-            router
-            style="background-color: linear-gradient(135deg, var(--primary-color), var(--secondary-color));min-height: 100%;width: 600px;margin: 0 auto;padding: 0;"
-          >
-            <el-menu-item index="/" style="height:60px;width:140px;">首页</el-menu-item>
-            <el-menu-item index="/courses" style="height:60px;width:140px;">课程</el-menu-item>
-            <el-menu-item index="/notes" style="height:60px;width:140px;">笔记</el-menu-item>
-          </el-menu>
-          
-          <div class="user-actions">
-            <template v-if="isLoggedIn">
-              <!-- 角色导航组件 -->
-              <RoleNavigation class="role-nav" />
-              
-              <el-dropdown @command="handleCommand">
-                <span class="user-info">
-                  <el-icon><User /></el-icon>
-                  {{ userInfo.username || '用户' }}
-                  <el-icon class="el-icon--right"><arrow-down /></el-icon>
-                </span>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-                    <!-- <el-dropdown-item command="create-note">发布笔记</el-dropdown-item> -->
-                    <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-              
-              <!-- 管理员控制台按钮 -->
-              <el-button 
-                v-if="isAdmin"
-                type="primary" 
-                @click="goToAdmin"
-                :class="{ 'admin-active': $route.path === '/admin' }"
-                class="admin-console-btn"
-              >
-                <el-icon><Setting /></el-icon>
-                管理员控制台
-              </el-button>
-            </template>
-            <template v-else>
-              <el-button link @click="$router.push('/login')">登录</el-button>
-              <el-button type="primary" @click="$router.push('/register')">注册</el-button>
-            </template>
-          </div>
-        </div>
-      </el-header>
+        </el-header>
+        
+        <el-main class="app-main">
+          <router-view v-slot="{ Component }">
+            <transition name="fade" mode="out-in">
+              <component :is="Component" />
+            </transition>
+          </router-view>
+        </el-main>
       
-      <!-- 主要内容区域 -->
-      <el-main class="app-main">
-        <router-view v-slot="{ Component }">
-          <transition name="fade" mode="out-in">
-            <component :is="Component" />
-          </transition>
-        </router-view>
-      </el-main>
-      
-      <!-- 底部 -->
-      <el-footer class="app-footer">
-        <div class="footer-content">
-          <p>&copy; 2024 高校课程互助与笔记分享平台. All rights reserved.</p>
-          <p class="footer-links">
-            <a href="#">关于我们</a> |
-            <a href="#">联系我们</a> |
-            <a href="#">隐私政策</a>
-          </p>
-        </div>
-      </el-footer>
+      </el-container>
     </el-container>
   </div>
 </template>
 
 <script>
+// 添加侧栏图标到组件
+import { House, Reading, Document, Search as SearchIcon, Fold, Expand } from '@element-plus/icons-vue'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -100,16 +138,30 @@ export default {
     User,
     ArrowDown,
     Setting,
-    RoleNavigation
+    RoleNavigation,
+    House,
+    Reading,
+    Document,
+    SearchIcon,
+    Fold,
+    Expand
   },
   setup() {
     const router = useRouter()
     const route = useRoute()
     const isLoggedIn = ref(false)
     const userInfo = ref({})
+    const isCollapsed = ref(false)
+    const isAnimating = ref(false)
+    const toggleAside = () => {
+      isAnimating.value = true
+      isCollapsed.value = !isCollapsed.value
+      setTimeout(() => { isAnimating.value = false }, 420)
+    }
     
     // 管理员权限检查
     const isAdmin = computed(() => roleUtils.isAdmin())
+    const isTeacher = computed(() => roleUtils.isTeacher())
     
     // 检查登录状态
     const checkLoginStatus = () => {
@@ -158,6 +210,13 @@ export default {
         ElMessage.error('权限不足')
       }
     }
+    const goToTeacher = () => {
+      if (isTeacher.value) {
+        router.push('/teacher')
+      } else {
+        ElMessage.error('仅教师可访问')
+      }
+    }
     
     // 监听路由变化，每次路由变化时检查登录状态
     watch(() => route.path, () => {
@@ -186,24 +245,65 @@ export default {
       isLoggedIn,
       userInfo,
       isAdmin,
+      isTeacher,
       handleCommand,
-      goToAdmin
+      goToAdmin,
+      goToTeacher,
+      isCollapsed,
+      isAnimating,
+      toggleAside
     }
   }
 }
 </script>
 
 <style>
-#app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+/* 布局 */
+.layout-root { height: 100vh; }
+.app-aside {
+  background-image: linear-gradient(180deg,
+    color-mix(in srgb, var(--primary-color) 10%, white),
+    color-mix(in srgb, var(--secondary-color) 10%, white)
+  );
+  border-right: 1px solid color-mix(in srgb, var(--primary-color) 15%, white);
+  backdrop-filter: blur(4px);
+  position: sticky;
+  top: 64px;
+  height: calc(100vh - 64px);
+  padding: 8px 6px;
+  overflow: auto;
+  transition: width 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+              padding 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+              background 0.36s ease,
+              border-color 0.36s ease;
+  will-change: width, padding;
 }
-
-.el-container {
-  min-height: 100vh;
+.app-aside.is-animating { backdrop-filter: none; }
+.aside-logo {
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border-bottom: none;
 }
+/* 移除侧栏中的系统名称，仅保留菜单 */
+.side-nav-menu { border-right: none; padding: 8px 0; transition: padding 0.36s cubic-bezier(0.22, 1, 0.36, 1), width 0.36s cubic-bezier(0.22, 1, 0.36, 1); }
+.app-aside.is-collapsed .side-nav-menu { padding: 4px 0; }
+.side-nav-menu .el-menu-item { 
+  height: 44px; 
+  line-height: 44px; 
+  border-radius: 8px; 
+  margin: 4px 8px; 
+  transition: all .2s ease;
+}
+.side-nav-menu .el-menu-item .el-icon { margin-right: 8px; }
+.side-nav-menu .el-menu-item.is-active { 
+  background: color-mix(in srgb, var(--primary-color) 14%, white);
+  color: var(--primary-color);
+  box-shadow: inset 2px 0 0 var(--primary-color);
+}
+.side-nav-menu .el-menu-item:hover { background: color-mix(in srgb, var(--secondary-color) 12%, white); }
+.spacer { flex: 1; }
 
+/* 保留原有样式 */
 .app-header {
   background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
@@ -368,6 +468,26 @@ export default {
   transform: translateY(0);
 }
 
+/* 教师工作台按钮，仅教师显示 */
+.teacher-console-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+.teacher-console-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+.teacher-console-btn:active {
+  transform: translateY(0);
+}
 .role-nav .el-button {
   color: white;
   border-color: rgba(255, 255, 255, 0.4);
@@ -401,6 +521,8 @@ export default {
   margin-right: 16px;
   font-weight: 500;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  gap: 6px;
+  white-space: nowrap;
 }
 
 .user-info:hover {
@@ -558,4 +680,25 @@ export default {
     font-size: 0.9rem;
   }
 }
+.collapse-toggle { color: #fff; }
+.collapse-toggle .el-icon { font-size: 18px; }
+.left-tools { display: flex; align-items: center; }
+/* 菜单文字平滑出现/隐藏 */
+.side-nav-menu .el-menu-item span {
+  display: inline-block !important;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 1;
+  max-width: 160px;
+  transition: opacity 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+              max-width 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.app-aside.is-collapsed .side-nav-menu .el-menu-item span {
+  opacity: 0;
+  max-width: 0;
+  transform: translateX(6px);
+}
+.app-aside.is-collapsed .side-nav-menu .el-menu-item .el-icon { margin-right: 0; }
+.app-aside.is-collapsed .side-nav-menu .el-menu-item { justify-content: center; }
 </style>

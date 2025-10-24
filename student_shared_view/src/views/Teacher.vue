@@ -176,53 +176,16 @@ const stats = ref({
   courseNotes: 0
 })
 
-// 我的课程
-const myCourses = ref([
-  {
-    id: 1,
-    name: 'Vue.js 进阶开发',
-    code: 'CS301',
-    students: 45,
-    status: '进行中',
-    created_at: '2024-01-10 09:00:00'
-  },
-  {
-    id: 2,
-    name: 'JavaScript 高级编程',
-    code: 'CS302',
-    students: 38,
-    status: '进行中',
-    created_at: '2024-01-08 14:30:00'
-  },
-  {
-    id: 3,
-    name: 'React 实战项目',
-    code: 'CS303',
-    students: 52,
-    status: '已结束',
-    created_at: '2023-12-15 10:15:00'
-  }
-])
+// 我的课程（从后端加载，仅教师角色关联的课程）
+const myCourses = ref([])
 
-// 最近活动
+// 最近活动（占位）
 const recentActivities = ref([
   {
     id: 1,
     title: '新学生加入课程',
-    description: '张三同学加入了《Vue.js 进阶开发》课程',
-    time: '2024-01-15 10:30:00'
-  },
-  {
-    id: 2,
-    title: '课程资料更新',
-    description: '更新了《JavaScript 高级编程》的第三章资料',
-    time: '2024-01-15 09:15:00'
-  },
-  {
-    id: 3,
-    title: '作业提交',
-    description: '收到15份《React 实战项目》的作业提交',
-    time: '2024-01-14 16:45:00'
+    description: '有学生加入了某课程',
+    time: '刚刚'
   }
 ])
 
@@ -236,16 +199,35 @@ const checkTeacherPermission = () => {
   return true
 }
 
+// 从后端加载我的课程（过滤教师角色）
+const loadMyCourses = async () => {
+  try {
+    const res = await courseAPI.getMyCourses({ page: 1, page_size: 50 })
+    const list = Array.isArray(res?.data) ? res.data : []
+    const teacherCourses = list.filter(c => (c.role || '').toLowerCase() === 'teacher')
+    myCourses.value = teacherCourses.map(c => ({
+      id: c.id,
+      name: c.name,
+      code: c.code,
+      students: c.student_count ?? 0,
+      status: c.status === 'active' ? '进行中' : '已结束',
+      created_at: c.created_at || ''
+    }))
+  } catch (error) {
+    ElMessage.error('加载我的课程失败')
+  }
+}
+
 // 加载统计数据
 const loadStats = async () => {
   try {
-    // 这里应该调用实际的API获取统计数据
+    // 依赖 myCourses 数据
     stats.value = {
       myCourses: myCourses.value.length,
-      totalStudents: myCourses.value.reduce((sum, course) => sum + course.students, 0),
-      courseNotes: 156
+      totalStudents: myCourses.value.reduce((sum, course) => sum + (course.students || 0), 0),
+      courseNotes: 0
     }
-  } catch (error) {
+  } catch {
     ElMessage.error('加载统计数据失败')
   }
 }
@@ -253,7 +235,6 @@ const loadStats = async () => {
 // 课程管理功能
 const createCourse = () => {
   ElMessage.info('创建课程功能开发中...')
-  // router.push('/create-course')
 }
 
 const viewMyCourses = () => {
@@ -283,18 +264,11 @@ const deleteCourse = async (course) => {
         type: 'warning'
       }
     )
-    
-    // 调用删除API
+
     await courseAPI.deleteCourse(course.id)
-    
-    // 从列表中移除
-    const index = myCourses.value.findIndex(c => c.id === course.id)
-    if (index > -1) {
-      myCourses.value.splice(index, 1)
-    }
-    
+    myCourses.value = myCourses.value.filter(c => c.id !== course.id)
     ElMessage.success('课程删除成功')
-    loadStats() // 重新加载统计数据
+    await loadStats()
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('删除课程失败')
@@ -315,9 +289,10 @@ const viewAnalytics = () => {
   ElMessage.info('学习分析功能开发中...')
 }
 
-onMounted(() => {
+onMounted(async () => {
   if (checkTeacherPermission()) {
-    loadStats()
+    await loadMyCourses()
+    await loadStats()
   }
 })
 </script>

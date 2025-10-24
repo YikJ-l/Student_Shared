@@ -181,34 +181,6 @@ export default {
         }
       } catch (error) {
         console.error('获取最新课程失败:', error)
-        // 使用模拟数据作为后备
-        latestCourses.value = [
-          {
-            id: 1,
-            name: '高等数学',
-            teacher: '张教授',
-            description: '微积分基础理论与应用',
-            category: '数学',
-            created_at: new Date().toISOString()
-          },
-          {
-            id: 2,
-            name: '数据结构',
-            teacher: '李教授',
-            description: '计算机科学基础课程',
-            category: '计算机',
-            created_at: new Date().toISOString()
-          },
-          {
-            id: 3,
-            name: '大学英语',
-            teacher: '王教授',
-            description: '英语听说读写综合训练',
-            category: '语言',
-            created_at: new Date().toISOString()
-          }
-        ]
-        stats.value.courses = 156
       }
     }
 
@@ -222,34 +194,6 @@ export default {
         stats.value.notes = allNotesResponse.total || 0
       } catch (error) {
         console.error('获取热门笔记失败:', error)
-        // 使用模拟数据作为后备
-        latestNotes.value = [
-          {
-            id: 1,
-            title: '微积分重点知识总结',
-            author: '小明',
-            content: '本笔记总结了微积分的重点知识点，包括导数、积分的基本概念和计算方法...',
-            course_name: '高等数学',
-            created_at: new Date().toISOString()
-          },
-          {
-            id: 2,
-            title: '二叉树遍历算法详解',
-            author: '小红',
-            content: '详细介绍了二叉树的前序、中序、后序遍历算法，包含代码实现和时间复杂度分析...',
-            course_name: '数据结构',
-            created_at: new Date().toISOString()
-          },
-          {
-            id: 3,
-            title: '英语语法要点整理',
-            author: '小李',
-            content: '整理了大学英语常用语法要点，包括时态、语态、从句等重要语法知识...',
-            course_name: '大学英语',
-            created_at: new Date().toISOString()
-          }
-        ]
-        stats.value.notes = 892
       }
     }
 
@@ -265,13 +209,6 @@ export default {
         }
       } catch (error) {
         console.error('获取统计数据失败:', error)
-        // 使用默认值作为后备
-        stats.value = {
-          courses: 0,
-          notes: 0,
-          users: 0,
-          comments: 0
-        }
       }
     }
 

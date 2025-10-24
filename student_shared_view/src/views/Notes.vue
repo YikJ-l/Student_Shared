@@ -227,95 +227,10 @@ export default {
       } catch (error) {
         console.error('获取笔记列表失败:', error)
         ElMessage.error('获取笔记列表失败')
-        // 使用模拟数据作为后备
-        const mockNotes = [
-          {
-            id: 1,
-            title: '微积分重点知识总结',
-            content: '本笔记总结了微积分的重点知识点，包括导数、积分的基本概念和计算方法。导数是函数在某一点的瞬时变化率，积分是导数的逆运算...',
-            username: '小明',
-            author_id: 1,
-            author_avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-            course_name: '高等数学',
-            view_count: 245,
-            comment_count: 12,
-            like_count: 38,
-
-            created_at: '2024-02-15T10:30:00Z'
-          },
-          {
-            id: 2,
-            title: '二叉树遍历算法详解',
-            content: '详细介绍了二叉树的前序、中序、后序遍历算法，包含代码实现和时间复杂度分析。前序遍历：根-左-右，中序遍历：左-根-右...',
-            username: '小红',
-            author_id: 2,
-            author_avatar: 'https://cube.elemecdn.com/9/c2/f0ee8a3c7c9638a54940382568c9dpng.png',
-            course_name: '数据结构',
-            view_count: 189,
-            comment_count: 8,
-            like_count: 25,
-
-            created_at: '2024-02-14T14:20:00Z'
-          },
-          {
-            id: 3,
-            title: '英语语法要点整理',
-            content: '整理了大学英语常用语法要点，包括时态、语态、从句等重要语法知识。现在时表示经常性动作，过去时表示过去发生的动作...',
-            username: '小李',
-            author_id: 3,
-            author_avatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
-            course_name: '大学英语',
-            view_count: 156,
-            comment_count: 15,
-            like_count: 42,
-
-            created_at: '2024-02-13T09:15:00Z'
-          },
-          {
-            id: 4,
-            title: '矩阵运算技巧总结',
-            content: '线性代数中矩阵运算的各种技巧和方法，包括矩阵乘法、求逆、特征值计算等。矩阵乘法满足结合律但不满足交换律...',
-            username: '小王',
-            author_id: 4,
-            author_avatar: 'https://cube.elemecdn.com/6/94/4d3ea53c084bad6931a56d5158a48jpeg.jpeg',
-            course_name: '线性代数',
-            view_count: 203,
-            comment_count: 6,
-            like_count: 31,
-
-            created_at: '2024-02-12T16:45:00Z'
-          },
-          {
-            id: 5,
-            title: '进程调度算法比较',
-            content: '操作系统中各种进程调度算法的比较分析，包括FCFS、SJF、RR等算法的优缺点。FCFS算法简单但可能导致长作业等待...',
-            username: '小张',
-            author_id: 5,
-            author_avatar: 'https://cube.elemecdn.com/d/e6/c4d93a3805b3ce3f323f7974e6f78jpeg.jpeg',
-            course_name: '操作系统',
-            view_count: 178,
-            comment_count: 10,
-            like_count: 28,
-
-            created_at: '2024-02-11T11:30:00Z'
-          }
-        ]
         
-        // 简单的筛选和搜索逻辑
-        let filteredNotes = mockNotes
-        
-
-        
-        if (searchQuery.value) {
-          const query = searchQuery.value.toLowerCase()
-          filteredNotes = filteredNotes.filter(note => 
-            note.title.toLowerCase().includes(query) ||
-            note.content.toLowerCase().includes(query)
-          )
-        }
-        
-        notes.value = filteredNotes
-        total.value = filteredNotes.length
+        // 去除未定义的 mockNotes 依赖，改为安全的空数据回退
+        notes.value = []
+        total.value = 0
       } finally {
         loading.value = false
       }

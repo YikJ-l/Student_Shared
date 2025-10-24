@@ -350,7 +350,20 @@
           <el-input v-model="courseForm.name" placeholder="请输入课程名称" />
         </el-form-item>
         <el-form-item label="授课教师" prop="teacher">
-          <el-input v-model="courseForm.teacher" placeholder="请输入授课教师姓名" />
+          <el-select 
+            v-model="courseForm.teacher" 
+            filterable 
+            remote 
+            :remote-method="fetchTeacherOptions" 
+            :loading="teacherLoading"
+            placeholder="请输入关键词搜索教师">
+            <el-option
+              v-for="t in teacherOptions"
+              :key="t.value"
+              :label="t.label"
+              :value="t.value"
+            />
+          </el-select>
         </el-form-item>
 
         <el-form-item label="所属学校" prop="school">
@@ -464,6 +477,10 @@ const noteTotal = ref(0)
 const userEditDialogVisible = ref(false)
 const roleChangeDialogVisible = ref(false)
 const courseCreateDialogVisible = ref(false)
+// 新增：教师选项列表与加载状态
+const teacherOptions = ref([])
+const teacherLoading = ref(false)
+const teacherSearchTimer = ref(null)
 const editingUser = ref({})
 const roleChangeForm = ref({
   username: '',
@@ -485,7 +502,46 @@ const courseForm = ref({
   content: '',
   status: 'active'
 })
+const loadTeacherOptions = async () => {
+  if (!roleUtils.isAdmin()) return
+  teacherLoading.value = true
+  try {
+    const resp = await userAPI.getAllUsers({ role: 'teacher', page: 1, limit: 50 })
+    const list = Array.isArray(resp.data) ? resp.data : Array.isArray(resp.users) ? resp.users : Array.isArray(resp) ? resp : []
+    teacherOptions.value = list.map(u => ({
+      value: u.username,
+      label: (u.nickname ? `${u.nickname} (${u.username})` : u.username)
+    }))
+  } catch (e) {
+    console.error('加载教师列表失败:', e)
+    teacherOptions.value = []
+  } finally {
+    teacherLoading.value = false
+  }
+}
 
+const fetchTeacherOptions = (query) => {
+  if (!roleUtils.isAdmin()) return
+  if (teacherSearchTimer.value) {
+    clearTimeout(teacherSearchTimer.value)
+  }
+  teacherSearchTimer.value = setTimeout(async () => {
+    teacherLoading.value = true
+    try {
+      const resp = await userAPI.getAllUsers({ role: 'teacher', search: (query || '').trim(), page: 1, limit: 20 })
+      const list = Array.isArray(resp.data) ? resp.data : Array.isArray(resp.users) ? resp.users : Array.isArray(resp) ? resp : []
+      teacherOptions.value = list.map(u => ({
+        value: u.username,
+        label: (u.nickname ? `${u.nickname} (${u.username})` : u.username)
+      }))
+    } catch (e) {
+      console.error('搜索教师失败:', e)
+      teacherOptions.value = []
+    } finally {
+      teacherLoading.value = false
+    }
+  }, 300)
+}
 // 课程表单验证规则
 const courseRules = {
   code: [
@@ -498,8 +554,7 @@ const courseRules = {
     { min: 2, max: 100, message: '课程名称长度在 2 到 100 个字符', trigger: 'blur' }
   ],
   teacher: [
-    { required: true, message: '请输入授课教师', trigger: 'blur' },
-    { min: 2, max: 50, message: '教师姓名长度在 2 到 50 个字符', trigger: 'blur' }
+    { required: true, message: '请选择授课教师', trigger: 'change' }
   ],
 
   school: [
@@ -794,6 +849,8 @@ const createCourse = () => {
   }
   // 设置为创建模式
   isEditMode.value = false
+  // 加载教师列表
+  loadTeacherOptions()
   // 打开新建课程对话框
   courseCreateDialogVisible.value = true
 }
@@ -870,7 +927,13 @@ const editCourse = (course) => {
     content: course.content || '',
     status: course.status
   }
-  
+  // 加载教师列表并确保当前教师可选
+  loadTeacherOptions().then(() => {
+    const exists = teacherOptions.value.some(opt => opt.value === courseForm.value.teacher)
+    if (!exists && courseForm.value.teacher) {
+      teacherOptions.value.unshift({ value: courseForm.value.teacher, label: courseForm.value.teacher })
+    }
+  })
   // 设置为编辑模式
   isEditMode.value = true
   courseCreateDialogVisible.value = true
