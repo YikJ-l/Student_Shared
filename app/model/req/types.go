@@ -199,3 +199,25 @@ type SummarizeRequest struct {
 	NoteID  *uint   `json:"note_id"`
 	Content *string `json:"content"`
 }
+
+// 语义检索：笔记
+type SemanticSearchNotesRequest struct {
+	Keyword   string  `json:"keyword"`
+	CourseID  *uint   `json:"course_id"`
+	Status    string  `json:"status"` // 如: public
+	Page      int     `json:"page"`
+	PageSize  int     `json:"page_size"`
+	TopK      int     `json:"top_k"` // 可选，优先返回前K条最高相似度
+}
+
+// 语义检索：课程
+type SemanticSearchCoursesRequest struct {
+	Keyword   string `json:"keyword"`
+	School    string `json:"school"`
+	Department string `json:"department"`
+	Semester  string `json:"semester"`
+	Status    string `json:"status"`
+	Page      int    `json:"page"`
+	PageSize  int    `json:"page_size"`
+	TopK      int    `json:"top_k"`
+}

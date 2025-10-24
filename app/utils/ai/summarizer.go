@@ -25,7 +25,11 @@ func Summarize(text string) (string, []string) {
 	// 摘要：取前3句，最多300字符
 	summary := strings.Join(sentences[:min(3, len(sentences))], "")
 	if len(summary) > 300 {
-		summary = summary[:300]
+		// 按字符截断，避免UTF-8被切断导致乱码
+		r := []rune(summary)
+		if len(r) > 300 {
+			summary = string(r[:300]) + "…"
+		}
 	}
 
 	// 关键词：简单频次统计，过滤短词和纯数字，取前8

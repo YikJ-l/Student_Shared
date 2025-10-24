@@ -6,8 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"encoding/json"
+	"sort"
 	"student_shared/app/model"
 	"student_shared/app/utils/database"
+	ai "student_shared/app/utils/ai"
 
 	"student_shared/app/model/req"
 	"student_shared/app/model/resp"
@@ -646,6 +649,111 @@ func GetMyLikes(c *gin.Context) {
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"data": responseNotes, "total": total, "page": req.Page, "limit": req.Limit})
+}
+
+func SearchNotesSemantic(c *gin.Context) {
+	var params req.SemanticSearchNotesRequest
+	// 默认参数
+	params.Page = 1
+	params.PageSize = 10
+	_ = c.ShouldBindJSON(&params)
+	kw := strings.TrimSpace(params.Keyword)
+	if kw == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "搜索关键词不能为空"})
+		return
+	}
+	// 查询向量
+	queryEmb, err := ai.GetTextEmbedding(kw)
+	if err != nil || len(queryEmb) == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "生成查询向量失败"})
+		return
+	}
+	// 候选集合（公共笔记，可按课程过滤）
+	dbq := database.DB.Model(&model.Note{}).Where("status = ?", "public").Preload("User").Preload("Course")
+	if params.CourseID != nil {
+		dbq = dbq.Where("course_id = ?", *params.CourseID)
+	}
+	var notes []model.Note
+	if err := dbq.Limit(500).Find(&notes).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "加载候选笔记失败"})
+		return
+	}
+	// 计算相似度
+	type pair struct {
+		note model.Note
+		sim  float64
+	}
+	pairs := make([]pair, 0, len(notes))
+	for _, n := range notes {
+		var emb []float64
+		if n.Embedding != "" {
+			_ = json.Unmarshal([]byte(n.Embedding), &emb)
+		}
+		if len(emb) == 0 {
+			var ne model.NoteEmbedding
+			_ = database.DB.Where("note_id = ?", n.ID).First(&ne).Error
+			if ne.ID != 0 && ne.Embedding != "" {
+				_ = json.Unmarshal([]byte(ne.Embedding), &emb)
+			}
+		}
+		if len(emb) == 0 {
+			text := strings.TrimSpace(n.Title + " " + n.Description + " " + n.Content)
+			emb, _ = ai.GetTextEmbedding(text)
+		}
+		if len(emb) == 0 {
+			continue
+		}
+		sim := ai.CosineSimilarity(queryEmb, emb)
+		pairs = append(pairs, pair{note: n, sim: sim})
+	}
+	sort.Slice(pairs, func(i, j int) bool { return pairs[i].sim > pairs[j].sim })
+	// TopK 裁剪
+	if params.TopK > 0 && params.TopK < len(pairs) {
+		pairs = pairs[:params.TopK]
+	}
+	total := int64(len(pairs))
+	page := params.Page
+	if page <= 0 {
+		page = 1
+	}
+	pageSize := params.PageSize
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	start := (page - 1) * pageSize
+	if start >= len(pairs) {
+		c.JSON(http.StatusOK, gin.H{"total": total, "page": page, "page_size": pageSize, "total_pages": (int(total)+pageSize-1)/pageSize, "notes": []resp.NoteResponse{}})
+		return
+	}
+	end := start + pageSize
+	if end > len(pairs) {
+		end = len(pairs)
+	}
+	respNotes := make([]resp.NoteResponse, 0, end-start)
+	for _, p := range pairs[start:end] {
+		nr := buildNoteResponse(p.note)
+		nr.Similarity = p.sim
+		nr.HighlightTitle = ai.SimpleHighlighter(p.note.Title, kw)
+		nr.HighlightDescription = ai.SimpleHighlighter(p.note.Description, kw)
+		// 生成摘要：优先描述，其次内容；按字符截断避免UTF-8乱码
+		excerpt := p.note.Description
+		if strings.TrimSpace(excerpt) == "" {
+			excerpt = p.note.Content
+		}
+		runes := []rune(excerpt)
+		if len(runes) > 180 {
+			excerpt = string(runes[:180]) + "…"
+		}
+		nr.Excerpt = excerpt
+		respNotes = append(respNotes, nr)
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"total":       total,
+		"page":        page,
+		"page_size":   pageSize,
+		"total_pages": (int(total) + pageSize - 1) / pageSize,
+		"notes":       respNotes,
+	})
 }
 
 func SearchNotes(c *gin.Context) {

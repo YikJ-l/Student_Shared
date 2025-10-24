@@ -80,6 +80,9 @@ func RegisterRoutes(r *gin.Engine) {
 	{
 		searchRoutes.POST("/courses", middleware.OptionalAuthMiddleware(), api.SearchCourses)
 		searchRoutes.POST("/notes", middleware.OptionalAuthMiddleware(), api.SearchNotes)
+		// 语义检索端点
+		searchRoutes.POST("/notes/semantic", middleware.OptionalAuthMiddleware(), api.SearchNotesSemantic)
+		searchRoutes.POST("/courses/semantic", middleware.OptionalAuthMiddleware(), api.SearchCoursesSemantic)
 	}
 
 	// 首页相关路由 - 无需认证

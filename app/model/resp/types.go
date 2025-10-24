@@ -65,6 +65,11 @@ type NoteResponse struct {
 	IsFavorited   bool      `json:"is_favorited"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
+	// 语义检索可选字段
+	Similarity    float64   `json:"similarity,omitempty"`
+	Excerpt       string    `json:"excerpt,omitempty"`
+	HighlightTitle       string    `json:"highlight_title,omitempty"`
+	HighlightDescription string    `json:"highlight_description,omitempty"`
 }
 
 // -------- 管理员 --------
@@ -94,6 +99,10 @@ type CourseResponse struct {
 	IsJoined     bool      `json:"is_joined,omitempty"`
 	StudentCount int64     `json:"student_count,omitempty"`
 	NoteCount    int64     `json:"note_count,omitempty"`
+	// 语义检索可选字段
+	Similarity   float64   `json:"similarity,omitempty"`
+	HighlightName        string    `json:"highlight_name,omitempty"`
+	HighlightDescription string    `json:"highlight_description,omitempty"`
 }
 
 type MyCourseResponse struct {

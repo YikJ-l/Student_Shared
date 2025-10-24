@@ -3,8 +3,11 @@ package api
 import (
 	"net/http"
 	"strings"
+	"encoding/json"
+	"sort"
 	"student_shared/app/model"
 	"student_shared/app/utils/database"
+	ai "student_shared/app/utils/ai"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -146,14 +149,15 @@ func CreateCourse(c *gin.Context) {
 		return
 	}
 	role, _ := c.Get("role")
-	if role.(string) != "teacher" && role.(string) != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "只有教师和管理员可以创建课程"})
+
+	var params req.CourseRequest
+	if err := c.ShouldBindJSON(&params); err != nil || strings.TrimSpace(params.Code) == "" || strings.TrimSpace(params.Name) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数无效或缺少课程代码/名称"})
 		return
 	}
 
-	var params req.CourseRequest
-	if err := c.ShouldBindJSON(&params); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数无效"})
+	if role.(string) != "admin" && role.(string) != "teacher" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "只有教师或管理员可以创建课程"})
 		return
 	}
 
@@ -181,10 +185,19 @@ func CreateCourse(c *gin.Context) {
 		return
 	}
 
+	// 如果创建者是教师，则自动以教师身份加入课程
 	if role.(string) == "teacher" {
 		if err := model.AddUserToCourseWithRole(database.DB, userID.(uint), course.ID, "teacher"); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "创建者加入课程失败"})
 			return
+		}
+	}
+	// 如果创建者是管理员，且传入了教师用户名，则将该教师关联到课程
+	if role.(string) == "admin" && strings.TrimSpace(params.Teacher) != "" {
+		if teacherUser, uErr := model.GetUserByUsername(database.DB, params.Teacher); uErr == nil {
+			if teacherUser.Role == "teacher" {
+				_ = model.AddUserToCourseWithRole(database.DB, teacherUser.ID, course.ID, "teacher")
+			}
 		}
 	}
 
@@ -258,6 +271,16 @@ func UpdateCourse(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新课程信息失败"})
 		return
 	}
+
+	// 若更新了教师字段，尝试同步教师用户与课程的关联
+	if strings.TrimSpace(params.Teacher) != "" {
+		if teacherUser, uErr := model.GetUserByUsername(database.DB, params.Teacher); uErr == nil {
+			if teacherUser.Role == "teacher" {
+				_ = model.AddUserToCourseWithRole(database.DB, teacherUser.ID, course.ID, "teacher")
+			}
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "课程更新成功"})
 }
 
@@ -385,6 +408,120 @@ func SearchCourses(c *gin.Context) {
 		"page":        page,
 		"page_size":   pageSize,
 		"total_pages": totalPages,
+	})
+}
+
+func SearchCoursesSemantic(c *gin.Context) {
+	var params req.SemanticSearchCoursesRequest
+	params.Page = 1
+	params.PageSize = 10
+	_ = c.ShouldBindJSON(&params)
+	kw := strings.TrimSpace(params.Keyword)
+	if kw == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "搜索关键词不能为空"})
+		return
+	}
+	qEmb, err := ai.GetTextEmbedding(kw)
+	if err != nil || len(qEmb) == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "生成查询向量失败"})
+		return
+	}
+	// 候选课程集合
+	dbq := database.DB.Model(&model.Course{}).Where("status = ?", "active")
+	if strings.TrimSpace(params.School) != "" {
+		dbq = dbq.Where("school = ?", strings.TrimSpace(params.School))
+	}
+	if strings.TrimSpace(params.Department) != "" {
+		dbq = dbq.Where("department = ?", strings.TrimSpace(params.Department))
+	}
+	if strings.TrimSpace(params.Semester) != "" {
+		dbq = dbq.Where("semester = ?", strings.TrimSpace(params.Semester))
+	}
+	if strings.TrimSpace(params.Status) != "" {
+		dbq = dbq.Where("status = ?", strings.TrimSpace(params.Status))
+	}
+	var courses []model.Course
+	if err := dbq.Limit(500).Find(&courses).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "加载候选课程失败"})
+		return
+	}
+	type cp struct {
+		course model.Course
+		sim    float64
+	}
+	pairs := make([]cp, 0, len(courses))
+	for _, c := range courses {
+		var emb []float64
+		if c.Embedding != "" {
+			_ = json.Unmarshal([]byte(c.Embedding), &emb)
+		}
+		if len(emb) == 0 {
+			var ce model.CourseEmbedding
+			_ = database.DB.Where("course_id = ?", c.ID).First(&ce).Error
+			if ce.ID != 0 && ce.Embedding != "" {
+				_ = json.Unmarshal([]byte(ce.Embedding), &emb)
+			}
+		}
+		if len(emb) == 0 {
+			text := strings.TrimSpace(c.Name + " " + c.Description + " " + c.Teacher + " " + c.Department + " " + c.School)
+			emb, _ = ai.GetTextEmbedding(text)
+		}
+		if len(emb) == 0 {
+			continue
+		}
+		sim := ai.CosineSimilarity(qEmb, emb)
+		pairs = append(pairs, cp{course: c, sim: sim})
+	}
+	sort.Slice(pairs, func(i, j int) bool { return pairs[i].sim > pairs[j].sim })
+	if params.TopK > 0 && params.TopK < len(pairs) {
+		pairs = pairs[:params.TopK]
+	}
+	total := int64(len(pairs))
+	page := params.Page
+	if page <= 0 {
+		page = 1
+	}
+	pageSize := params.PageSize
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	start := (page - 1) * pageSize
+	if start >= len(pairs) {
+		c.JSON(http.StatusOK, gin.H{"courses": []resp.CourseResponse{}, "total": total, "page": page, "page_size": pageSize, "total_pages": (int(total)+pageSize-1)/pageSize})
+		return
+	}
+	end := start + pageSize
+	if end > len(pairs) { end = len(pairs) }
+	out := make([]resp.CourseResponse, 0, end-start)
+	for _, p := range pairs[start:end] {
+		stats, _ := model.GetCourseStats(database.DB, p.course.ID)
+		cr := resp.CourseResponse{
+			ID:           p.course.ID,
+			Code:         p.course.Code,
+			Name:         p.course.Name,
+			Description:  p.course.Description,
+			School:       p.course.School,
+			Department:   p.course.Department,
+			Teacher:      p.course.Teacher,
+			Semester:     p.course.Semester,
+			Cover:        p.course.Cover,
+			Status:       p.course.Status,
+			CreatedAt:    p.course.CreatedAt,
+			UpdatedAt:    p.course.UpdatedAt,
+			StudentCount: stats.StudentCount,
+			NoteCount:    stats.NoteCount,
+			Similarity:   p.sim,
+			HighlightName:        ai.SimpleHighlighter(p.course.Name, kw),
+			HighlightDescription: ai.SimpleHighlighter(p.course.Description, kw),
+		}
+		out = append(out, cr)
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"courses":     out,
+		"total":       total,
+		"page":        page,
+		"page_size":   pageSize,
+		"total_pages": (int(total) + pageSize - 1) / pageSize,
 	})
 }
 
